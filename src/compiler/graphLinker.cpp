@@ -330,7 +330,7 @@ void GraphLinker::exitFunction() {
     auto resource = scope->get(key);
 
     // Don't worry about resources created inside the function
-    if (&resource->function->get() == &function->get())
+    if (resource->function && &resource->function->get() == &function->get())
       continue;
 
     // Don't add params to first/last uses/writes
@@ -361,8 +361,8 @@ void GraphLinker::exitFunction() {
 
   scope = savedScopes.top();
   savedScopes.pop();
-  // Pop both block and function scopes
 
+  // Pop both block and function scopes
   scopeLifetimes.pop();
   scopeLifetimes.pop();
 

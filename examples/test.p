@@ -1,5 +1,7 @@
 void outer() {
-    void inner() {
-        print "shouldn't happen";
-    }
+    print "a":
+
+    outer();
 }
+
+outer();
