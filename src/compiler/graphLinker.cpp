@@ -119,7 +119,8 @@ void GraphLinker::useResource(Expression &expr, std::string name, bool write) {
       addDependency(expr, dep);
     }
 
-    if (function && resource.function && &resource.function->get() != &function->get() &&
+    if (function &&
+        (!resource.function || &resource.function->get() != &function->get()) &&
         !function->get().firstUses.contains(name)) {
       // This is our first write
       function->get().firstUses[name] = resource.currAccesses;
