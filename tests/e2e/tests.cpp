@@ -127,4 +127,23 @@ std::vector<E2eTest> tests = {
      "a();\n"
      "b();",
      {"A", "B"}},
+    {"CallsCanCallFunctionsWithIfStatementsInside",
+     "void main() { \n"
+     "if (true)\n"
+     "print \"A\";\n"
+     "if (false)\n"
+     "print \"B\";\n"
+     "}\n"
+     "main();",
+     {"A"}},
+    {"CallsCanCallFunctionsWithWhileStatementsInside",
+     "void main() { \n"
+     "int a = 5;\n"
+     "while (a) {\n"
+     "print a;\n"
+     "a = a - 1;\n"
+     "}\n"
+     "}\n"
+     "main();",
+     {"5", "4", "3", "2", "1"}},
 };

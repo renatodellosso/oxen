@@ -65,6 +65,8 @@ GraphLinker::GraphLinker(
 
 Resource &GraphLinker::createResource(std::string name) {
   Resource resource(name);
+  if (function)
+    resource.function = function;
 
   if (scope->getVarTable().contains(resource.name))
     throw std::runtime_error(std::format(
@@ -117,7 +119,8 @@ void GraphLinker::useResource(Expression &expr, std::string name, bool write) {
       addDependency(expr, dep);
     }
 
-    if (function.has_value() && !function->get().firstUses.contains(name)) {
+    if (function.has_value() && &resource.function->get() != &function->get() &&
+        !function->get().firstUses.contains(name)) {
       // This is our first write
       function->get().firstUses[name] = resource.currAccesses;
       function->get().firstWrites.emplace(name, expr);
@@ -325,6 +328,10 @@ void GraphLinker::exitFunction() {
   // Populate lastUses and lastWrites
   for (auto key : scope->getKeys()) {
     auto resource = scope->get(key);
+
+    // Don't worry about resources created inside the function
+    if (&resource->function->get() == &function->get())
+      continue;
 
     // Don't add params to first/last uses/writes
     bool isParam = false;

@@ -58,7 +58,7 @@ void Executor::skipInstruction(Instruction &instr) {
     int toSkip = std::get<int>(instr.bytecodeArgs[0].val);
     skipUntil = instr.id + toSkip;
     for (int i = 1; i < toSkip; i++) {
-      skipInstruction(program[instr.id + i]);
+      skipInstruction(instr.program->at(instr.id + i));
     }
   }
 
@@ -97,7 +97,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
         continue;
       }
 
-      auto &inner = program[instr.id + i + 1];
+      auto &inner = instr.program->at(instr.id + i + 1);
       if (inner.type == InstructionType::Block) {
         skip = std::get<int>(inner.bytecodeArgs[0].val);
       }
@@ -210,7 +210,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
       break;
 
     // Skip next instruction
-    skipInstruction(program[instr.id + 1]);
+    skipInstruction(instr.program->at(instr.id + 1));
     break;
   }
   case InstructionType::While: {
@@ -229,7 +229,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
     }
 
     // Skip next instruction
-    skipInstruction(program[instr.id + 1]);
+    skipInstruction(instr.program->at(instr.id + 1));
     break;
   }
   case InstructionType::GoTo: {
@@ -242,13 +242,13 @@ void Executor::execSingleInstruction(Instruction &instr) {
     int returnTo = instr.id + dist;
 
     for (int i = returnTo; i <= instr.id; i++) {
-      for (auto dep : program[i].dependents) {
+      for (auto dep : instr.program->at(i).dependents) {
         if (dep.instr->id > returnTo && dep.instr->id <= instr.id)
           dep.instr->depsFulfilled--;
       }
     }
 
-    queue.push(program[returnTo]);
+    queue.push(instr.program->at(returnTo));
 
     break;
   }
@@ -263,11 +263,11 @@ void Executor::execSingleInstruction(Instruction &instr) {
     break;
   }
   case InstructionType::Function: {
-    auto func = std::make_shared<Function>(instr, program);
+    auto func = std::make_shared<Function>(instr, *instr.program.get());
     instr.scope->alloc(func->getName(), {ValueType::Function, func});
 
     // Skip body
-    skipInstruction(program[instr.id + 1]);
+    skipInstruction(instr.program->at(instr.id + 1));
 
     break;
   }

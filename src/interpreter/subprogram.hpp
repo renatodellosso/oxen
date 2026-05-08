@@ -4,16 +4,16 @@
 #include <memory>
 #include <vector>
 
+// Be sure to call setSubprogramPointers!
 class Subprogram {
   std::shared_ptr<std::vector<Instruction>> instrs;
 
-  void setSubprogramPointers(std::shared_ptr<Subprogram> self);
-
 public:
   Subprogram();
-  // Be sure to call setSubprogramPointers!
   Subprogram(Subprogram base, int startIndex, int size);
   Subprogram(std::shared_ptr<std::vector<Instruction>> instrs);
+
+  void setSubprogramPointers(std::shared_ptr<Subprogram> self);
 
   Instruction &operator[](size_t i);
 

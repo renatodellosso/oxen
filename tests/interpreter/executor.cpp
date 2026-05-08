@@ -128,11 +128,12 @@ TEST(startExecution, initsFunctions) {
 
   auto instrs = std::make_shared<std::vector<Instruction>>(
       std::vector<Instruction>({getFuncInstr(), getBlockInstr()}));
-  Subprogram program(instrs);
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
 
   Instruction &funcInstr = instrs->at(0);
 
-  Executor executor({.verbose = true, .threads = 1}, program);
+  Executor executor({.verbose = true, .threads = 1}, *program.get());
   executor.startExecution();
 
   auto funcVal = funcInstr.scope->get("func");
@@ -155,11 +156,12 @@ TEST(startExecution, initsFunctionsWithParams) {
 
   auto instrs = std::make_shared<std::vector<Instruction>>(
       std::vector<Instruction>({getFuncInstr(), getBlockInstr()}));
-  Subprogram program(instrs);
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
 
   Instruction &funcInstr = instrs->at(0);
 
-  Executor executor({.verbose = true, .threads = 1}, program);
+  Executor executor({.verbose = true, .threads = 1}, *program.get());
   executor.startExecution();
 
   auto funcVal = funcInstr.scope->get("func");
@@ -188,11 +190,12 @@ TEST(startExecution, initsFunctionsWithFirstUses) {
 
   auto instrs = std::make_shared<std::vector<Instruction>>(
       std::vector<Instruction>({getFuncInstr(), getBlockInstr()}));
-  Subprogram program(instrs);
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
 
   Instruction &funcInstr = instrs->at(0);
 
-  Executor executor({.verbose = true, .threads = 1}, program);
+  Executor executor({.verbose = true, .threads = 1}, *program.get());
   executor.startExecution();
 
   auto funcVal = funcInstr.scope->get("func");
@@ -221,11 +224,12 @@ TEST(startExecution, initsFunctionsWithLastUses) {
 
   auto instrs = std::make_shared<std::vector<Instruction>>(
       std::vector<Instruction>({getFuncInstr(), getBlockInstr()}));
-  Subprogram program(instrs);
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
 
   Instruction &funcInstr = instrs->at(0);
 
-  Executor executor({.verbose = true, .threads = 1}, program);
+  Executor executor({.verbose = true, .threads = 1}, *program.get());
   executor.startExecution();
 
   auto funcVal = funcInstr.scope->get("func");
@@ -254,11 +258,12 @@ TEST(startExecution, initsFunctionsWithFirstWrites) {
 
   auto instrs = std::make_shared<std::vector<Instruction>>(
       std::vector<Instruction>({getFuncInstr(), getBlockInstr()}));
-  Subprogram program(instrs);
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
 
   Instruction &funcInstr = instrs->at(0);
 
-  Executor executor({.verbose = true, .threads = 1}, program);
+  Executor executor({.verbose = true, .threads = 1}, *program.get());
   executor.startExecution();
 
   auto funcVal = funcInstr.scope->get("func");
@@ -285,11 +290,12 @@ TEST(startExecution, initsFunctionsWithLastWrites) {
 
   auto instrs = std::make_shared<std::vector<Instruction>>(
       std::vector<Instruction>({getFuncInstr(), getBlockInstr()}));
-  Subprogram program(instrs);
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
 
   Instruction &funcInstr = instrs->at(0);
 
-  Executor executor({.verbose = true, .threads = 1}, program);
+  Executor executor({.verbose = true, .threads = 1}, *program.get());
   executor.startExecution();
 
   auto funcVal = funcInstr.scope->get("func");

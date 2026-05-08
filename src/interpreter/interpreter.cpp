@@ -5,6 +5,7 @@
 #include "executor.hpp"
 #include "subprogram.hpp"
 #include <chrono>
+#include <memory>
 
 #define LOCATION "Interpreter"
 
@@ -29,8 +30,10 @@ ExitCode Interpreter::interpret(std::istream &stream) {
 
   try {
     auto instrs = std::make_shared<std::vector<Instruction>>(instructions);
-    Subprogram program(instrs);
-    Executor *executor = new Executor(args, program);
+    auto program = std::make_shared<Subprogram>(instrs);
+    program->setSubprogramPointers(program);
+    
+    Executor *executor = new Executor(args, *program.get());
     executor->startExecution();
 
     delete executor;
