@@ -1,9 +1,5 @@
-void main() {
-    int a = 5;
-    while (a) {
-        print a;
-        a = a - 1;
+void outer() {
+    void inner() {
+        print "shouldn't happen";
     }
 }
-
-main();

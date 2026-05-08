@@ -58,7 +58,8 @@ void Executor::skipInstruction(Instruction &instr) {
     int toSkip = std::get<int>(instr.bytecodeArgs[0].val);
     skipUntil = instr.id + toSkip;
     for (int i = 1; i < toSkip; i++) {
-      auto skipped = instr.program->at(instr.id + i);
+      // auto& not auto& - don't forget the &!
+      auto &skipped = instr.program->at(instr.id + i);
       skipInstruction(skipped);
 
       // Skipping the block skips its body, so don't skip again
