@@ -289,7 +289,7 @@ void GraphLinker::processExpression(Expression &expr) {
         throw std::runtime_error(std::format(
             "Tried to call function '{}', but it was not a function!", name));
 
-      call.function = std::make_optional(resource->function.value());
+      call.setFunction(resource->function.value());
 
       // Maps resource names to write (true/false)
       auto uses = std::unordered_map<std::string, bool>();

@@ -73,6 +73,12 @@ compile(const CliArgs &args, std::istream &inputStream,
   if (shouldLog)
     log(LOCATION, "Linked graph");
 
+  // Renumber expressions
+  exprId = 0;
+  for (auto expr : *astBuilder.getExpressions().get()) {
+    exprId = expr->numberExpressions(exprId);
+  }
+
   std::string bytecode = "";
   for (auto expr : *astBuilder.getExpressions().get()) {
     bytecode += expr->toByteCode() + "\n";

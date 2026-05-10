@@ -162,7 +162,7 @@ struct FunctionExpression : public Expression {
 
 // First expression in expressions is the function identifier
 struct CallExpression : public BlockExpression {
-  // Dependency remappings - maps dependency index to subprogram IDs that that
+  // Dependent remappings - maps dependent index to subprogram IDs that that
   // dep should depend on instead of this call
   std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
       depRemaps;
@@ -187,4 +187,7 @@ struct CallExpression : public BlockExpression {
   int numberExpressions(int startWith) override;
 
   std::string getFunctionName() const;
+
+  // Sets function and converts argument expressions into declarations
+  void setFunction(std::reference_wrapper<FunctionExpression> function);
 };

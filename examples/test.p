@@ -1,11 +1,5 @@
-int a = 0;
-
-void main() {
-    print a;
+int add(int a, int b) {
+    print a + b;
 }
 
-main();
-a = 1;
-main();
-a = 2;
-main();
+add(99, 101);

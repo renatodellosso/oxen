@@ -1,4 +1,5 @@
 #include "expression.hpp"
+#include "token.hpp"
 #include <algorithm>
 #include <format>
 #include <iterator>
@@ -317,7 +318,6 @@ std::string CallExpression::toString() const {
 }
 
 std::string CallExpression::toByteCode() const {
-  // Subtract 1 from count to exclude this instruction
   std::string str = "";
 
   // Use references
@@ -380,4 +380,38 @@ std::string CallExpression::getFunctionName() const {
   auto nameExpr = std::static_pointer_cast<RootExpression>(expressions[0]);
 
   return nameExpr->token.raw;
+}
+
+static std::shared_ptr<Expression>
+convertToDeclaration(std::shared_ptr<Expression> origExpr,
+                     FunctionExprParameter param) {
+  std::shared_ptr<Expression> type = std::make_shared<RootExpression>(
+      InstructionType::GetIdentifier, origExpr->lineNumber,
+      Token({TokenType::Identifier, TokenSubtype::None, param.type,
+             origExpr->lineNumber}));
+
+  std::shared_ptr<Expression> name = std::make_shared<RootExpression>(
+      InstructionType::GetLiteral, origExpr->lineNumber,
+      Token({TokenType::Literal, TokenSubtype::String, param.name,
+             origExpr->lineNumber}));
+
+  std::shared_ptr<Expression> declaration = std::make_shared<BinaryExpression>(
+      InstructionType::Declare, origExpr->lineNumber, type, name);
+
+  std::shared_ptr<Expression> set = std::make_shared<BinaryExpression>(
+      InstructionType::Set, origExpr->lineNumber, declaration, origExpr);
+
+  return set;
+}
+
+void CallExpression::setFunction(
+    std::reference_wrapper<FunctionExpression> function) {
+  this->function = function;
+
+  // Skip first expression since it's the GetIdentifier expression for the
+  // function itself
+  for (int i = 1; i < expressions.size(); i++) {
+    expressions[i] =
+        convertToDeclaration(expressions[i], function.get().params[i - 1]);
+  }
 }
