@@ -34,15 +34,39 @@ static void deduplicateDependenciesForSet(BinaryExpression &set,
   }
 }
 
-static void addDependency(Expression &expr, Expression &dependsOn) {
+static void
+addDependency(Expression &expr, Expression &dependsOn,
+              std::optional<std::string> resourceName = std::nullopt) {
   auto redirect = dependsOn.dependentRedirect;
   if (redirect) {
-    addDependency(expr, *redirect);
+    addDependency(expr, *redirect, resourceName);
     return;
   }
 
   dependsOn.dependents.push_back(expr);
   expr.dependencies.push_back(dependsOn);
+
+  if (dependsOn.type == InstructionType::Call) {
+    // Handle dependency remapping
+
+    if (!resourceName)
+      throw std::runtime_error(
+          std::format("Tried to add dependency from {} to {}, but no resource "
+                      "name was provided!",
+                      expr.toString(), dependsOn.toString()));
+
+    auto &call = static_cast<CallExpression &>(dependsOn);
+    auto func = call.function.value().get();
+
+    auto lastUses = func.lastUses.find(resourceName.value());
+    if (lastUses == func.lastUses.end())
+      throw std::runtime_error(std::format(
+          "Tried to add dependency from {} to {} with resource name "
+          "'{}', but the function did not use that resource!",
+          expr.toString(), dependsOn.toString(), resourceName.value()));
+
+    call.depRemaps[call.dependents.size() - 1] = lastUses->second;
+  }
 }
 
 GraphLinker::GraphLinker(
@@ -108,7 +132,7 @@ void GraphLinker::useResource(Expression &expr, std::string name, bool write) {
   // If we're writing to this resource, the last write is in currAccesses, so we
   // add the dependency there
   if (!write && resource.lastWrittenBy) {
-    addDependency(expr, *resource.lastWrittenBy);
+    addDependency(expr, *resource.lastWrittenBy, name);
   }
 
   if (write) {
@@ -116,7 +140,7 @@ void GraphLinker::useResource(Expression &expr, std::string name, bool write) {
 
     // Add a dependency to everything in the access set
     for (auto dep : resource.currAccesses) {
-      addDependency(expr, dep);
+      addDependency(expr, dep, name);
     }
 
     if (function &&
@@ -264,6 +288,8 @@ void GraphLinker::processExpression(Expression &expr) {
       if (!resource->function)
         throw std::runtime_error(std::format(
             "Tried to call function '{}', but it was not a function!", name));
+
+      call.function = std::make_optional(resource->function.value());
 
       // Maps resource names to write (true/false)
       auto uses = std::unordered_map<std::string, bool>();

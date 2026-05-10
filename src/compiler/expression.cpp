@@ -327,6 +327,18 @@ std::string CallExpression::toByteCode() const {
 
   str += Expression::toByteCode();
 
+  // Write depRemaps
+  int subprogramOffset = -function.value().get().id;
+
+  str += " " + std::to_string(depRemaps.size());
+
+  for (auto entry : depRemaps) {
+    str += " " + std::to_string(entry.first) + " " +
+           std::to_string(entry.second.size());
+    for (auto dep : entry.second)
+      str += " " + std::to_string(dep.get().id + subprogramOffset);
+  }
+
   return str;
 }
 

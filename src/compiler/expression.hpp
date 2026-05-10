@@ -162,10 +162,17 @@ struct FunctionExpression : public Expression {
 
 // First expression in expressions is the function identifier
 struct CallExpression : public BlockExpression {
+  // Dependency remappings - maps dependency index to subprogram IDs that that
+  // dep should depend on instead of this call
+  std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
+      depRemaps;
+
+  std::optional<std::reference_wrapper<FunctionExpression>> function;
+
   CallExpression() : CallExpression(-1) {}
   CallExpression(std::vector<std::shared_ptr<Expression>> expressions,
                  int lineNumber)
-      : BlockExpression(expressions, lineNumber) {
+      : BlockExpression(expressions, lineNumber), function(std::nullopt) {
     type = InstructionType::Call;
   }
   CallExpression(int lineNumber)
