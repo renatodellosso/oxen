@@ -304,80 +304,26 @@ int FunctionExpression::countInstructions() const {
   return 1 + body->countInstructions();
 }
 
-std::string CallExpression::toString() const {
-  auto str = Expression::toString() + "(";
+std::string UnaryCallExpression::toByteCode() const {
+  std::string bytecode = UnaryExpression::toByteCode();
 
-  // Use references
-  for (auto &line : expressions) {
-    str += line.get()->toString() + ", ";
-  }
+  bytecode += " " + std::to_string(depRemaps.size());
 
-  str.erase(str.end() - 2, str.end());
-
-  return str + ")";
-}
-
-std::string CallExpression::toByteCode() const {
-  std::string str = "";
-
-  // Use references
-  for (auto &line : expressions) {
-    str += line->toByteCode() + "\n";
-  }
-
-  str += Expression::toByteCode();
-
-  // Write depRemaps
   int subprogramOffset = -function.value().get().id;
 
-  str += " " + std::to_string(depRemaps.size());
-
-  for (auto entry : depRemaps) {
-    str += " " + std::to_string(entry.first) + " " +
-           std::to_string(entry.second.size());
-    for (auto dep : entry.second)
-      str += " " + std::to_string(dep.get().id + subprogramOffset);
+  for (auto remap : depRemaps) {
+    bytecode += " " + std::to_string(remap.first) + " " +
+                std::to_string(remap.second.size());
+    for (auto dep : remap.second)
+      bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
   }
 
-  return str;
-}
-
-std::vector<std::reference_wrapper<Expression>>
-CallExpression::getWithSubExpressions() const {
-  std::vector<std::reference_wrapper<Expression>> vector;
-
-  for (auto expr : expressions) {
-    auto exprVec = expr.get()->getWithSubExpressions();
-    std::move(exprVec.begin(), exprVec.end(),
-              std::back_inserter(vector)); // Move rightVec into end of vector
-  }
-
-  auto base = Expression::getWithSubExpressions();
-  std::move(base.begin(), base.end(), std::back_inserter(vector));
-
-  return vector;
-}
-
-void CallExpression::linkInternally() {
-  for (int i = 0; i < expressions.size(); i++) {
-    addDependency(*this, *expressions[i].get(), i);
-  }
-}
-
-int CallExpression::numberExpressions(int startWith) {
-
-  for (auto &line : expressions) {
-    startWith = line.get()->numberExpressions(startWith);
-  }
-
-  id = startWith;
-  startWith++;
-
-  return startWith;
+  return bytecode;
 }
 
 std::string CallExpression::getFunctionName() const {
-  auto nameExpr = std::static_pointer_cast<RootExpression>(expressions[0]);
+  auto call = std::static_pointer_cast<UnaryExpression>(expressions[0]);
+  auto nameExpr = std::static_pointer_cast<RootExpression>(call->root);
 
   return nameExpr->token.raw;
 }
@@ -407,6 +353,7 @@ convertToDeclaration(std::shared_ptr<Expression> origExpr,
 void CallExpression::setFunction(
     std::reference_wrapper<FunctionExpression> function) {
   this->function = function;
+  getActualCall().function = function;
 
   // Skip first expression since it's the GetIdentifier expression for the
   // function itself
@@ -414,4 +361,8 @@ void CallExpression::setFunction(
     expressions[i] =
         convertToDeclaration(expressions[i], function.get().params[i - 1]);
   }
+}
+
+UnaryCallExpression &CallExpression::getActualCall() {
+  return *std::static_pointer_cast<UnaryCallExpression>(expressions[0]).get();
 }

@@ -55,7 +55,7 @@ addDependency(Expression &expr, Expression &dependsOn,
                       "name was provided!",
                       expr.toString(), dependsOn.toString()));
 
-    auto &call = static_cast<CallExpression &>(dependsOn);
+    auto &call = static_cast<UnaryCallExpression &>(dependsOn);
     auto func = call.function.value().get();
 
     auto lastUses = func.lastUses.find(resourceName.value());
@@ -209,7 +209,12 @@ void GraphLinker::processExpression(Expression &expr) {
                expr.type == InstructionType::While) {
       auto next = expressions[expr.id + 1];
       addDependency(next, expr); // Add dependency with block
-    } else if (expr.type == InstructionType::Block) {
+    } else if (expr.type == InstructionType::Block &&
+               (static_cast<BlockExpression *>(&expr)->expressions.size() ==
+                    0 ||
+                static_cast<BlockExpression *>(&expr)
+                        ->expressions.at(0)
+                        ->type != InstructionType::Call)) {
       BlockExpression &block = *static_cast<BlockExpression *>(&expr);
       int size =
           block.countInstructions() - 1; // -1 to exclude the block itself
@@ -277,7 +282,10 @@ void GraphLinker::processExpression(Expression &expr) {
         expressions[i].get().dependentRedirect =
             &expressions[conditionIndex].get();
       }
-    } else if (expr.type == InstructionType::Call) {
+    } else if (expr.type == InstructionType::Block &&
+               static_cast<BlockExpression *>(&expr)->expressions.size() > 0 &&
+               static_cast<BlockExpression *>(&expr)->expressions.at(0)->type ==
+                   InstructionType::Call) {
       CallExpression &call = static_cast<CallExpression &>(expr);
       auto name = call.getFunctionName();
 
@@ -306,7 +314,7 @@ void GraphLinker::processExpression(Expression &expr) {
 
       // Use the resources
       for (auto resource : uses) {
-        useResource(call, resource.first, resource.second);
+        useResource(call.getActualCall(), resource.first, resource.second);
       }
     }
   } catch (std::runtime_error err) {

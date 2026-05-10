@@ -774,8 +774,7 @@ TEST(linkGraph, linksCallDependenciesWithoutParameters) {
   Token token = {TokenType::Identifier, TokenSubtype::None, "func", 3};
   auto getFunc = std::make_shared<RootExpression>(
       InstructionType::GetIdentifier, 3, token);
-  std::vector<std::shared_ptr<Expression>> callExprs = {getFunc};
-  auto call = std::make_shared<CallExpression>(callExprs, 3);
+  auto call = std::make_shared<CallExpression>(getFunc, 3);
 
   auto expressions =
       std::make_shared<std::vector<std::shared_ptr<Expression>>>();
@@ -794,23 +793,23 @@ TEST(linkGraph, linksCallDependenciesWithoutParameters) {
   EXPECT_EQ(linker->getErrors()->size(), 0);
 
   ASSERT_EQ(func->dependents.size(), 2); // Block and call
-  ASSERT_EQ(call->dependencies.size(),
+  ASSERT_EQ(call->getActualCall().dependencies.size(),
             2); // The GetIdentifier already depends on the function
 
   EXPECT_EQ(&func->dependents[1].expr.get(), getFunc.get());
 
-  EXPECT_EQ(&call->dependencies[0].get(), declaration.get());
-  EXPECT_EQ(&call->dependencies[1].get(),
+  EXPECT_EQ(&call->getActualCall().dependencies[0].get(), declaration.get());
+  EXPECT_EQ(&call->getActualCall().dependencies[1].get(),
             getFunc.get()); // Internal links are after external links
 
   ASSERT_EQ(declaration->dependents.size(), 1);
-  EXPECT_EQ(&declaration->dependents[0].expr.get(), call.get());
+  EXPECT_EQ(&declaration->dependents[0].expr.get(), &call->getActualCall());
 
   ASSERT_EQ(getFunc->dependencies.size(), 1);
   EXPECT_EQ(&getFunc->dependencies[0].get(), func.get());
 
   ASSERT_EQ(getFunc->dependents.size(), 1);
-  EXPECT_EQ(&getFunc->dependents[0].expr.get(), call.get());
+  EXPECT_EQ(&getFunc->dependents[0].expr.get(), &call->getActualCall());
   EXPECT_EQ(getFunc->dependents[0].argIndex.value(), 0);
 
   delete linker;
@@ -844,8 +843,7 @@ TEST(linkGraph, linksCallDependentsWithoutParameters) {
   Token token = {TokenType::Identifier, TokenSubtype::None, "func", 3};
   auto getFunc = std::make_shared<RootExpression>(
       InstructionType::GetIdentifier, 3, token);
-  std::vector<std::shared_ptr<Expression>> callExprs = {getFunc};
-  auto call = std::make_shared<CallExpression>(callExprs, 3);
+  auto call = std::make_shared<CallExpression>(getFunc, 3);
 
   auto get = std::make_shared<RootExpression>(
       RootExpression(InstructionType::GetIdentifier, 2,
@@ -870,11 +868,11 @@ TEST(linkGraph, linksCallDependentsWithoutParameters) {
   EXPECT_NO_THROW(linker->linkGraph());
   EXPECT_EQ(linker->getErrors()->size(), 0);
 
-  ASSERT_EQ(call->dependents.size(), 1);
+  ASSERT_EQ(call->getActualCall().dependents.size(), 1);
   ASSERT_EQ(get->dependencies.size(), 1);
 
-  EXPECT_EQ(&call->dependents[0].expr.get(), get.get());
-  EXPECT_EQ(&get->dependencies[0].get(), call.get());
+  EXPECT_EQ(&call->getActualCall().dependents[0].expr.get(), get.get());
+  EXPECT_EQ(&get->dependencies[0].get(), &call->getActualCall());
 
   delete linker;
 }
@@ -907,8 +905,7 @@ TEST(linkGraph, setsCallFunction) {
   Token token = {TokenType::Identifier, TokenSubtype::None, "func", 3};
   auto getFunc = std::make_shared<RootExpression>(
       InstructionType::GetIdentifier, 3, token);
-  std::vector<std::shared_ptr<Expression>> callExprs = {getFunc};
-  auto call = std::make_shared<CallExpression>(callExprs, 3);
+  auto call = std::make_shared<CallExpression>(getFunc, 3);
 
   auto get = std::make_shared<RootExpression>(
       RootExpression(InstructionType::GetIdentifier, 2,
@@ -934,6 +931,7 @@ TEST(linkGraph, setsCallFunction) {
   EXPECT_EQ(linker->getErrors()->size(), 0);
 
   EXPECT_EQ(&call->function.value().get(), func.get());
+  EXPECT_EQ(&call->getActualCall().function.value().get(), func.get());
 
   delete linker;
 }
@@ -966,8 +964,7 @@ TEST(linkGraph, setsCallDepRemaps) {
   Token token = {TokenType::Identifier, TokenSubtype::None, "func", 3};
   auto getFunc = std::make_shared<RootExpression>(
       InstructionType::GetIdentifier, 3, token);
-  std::vector<std::shared_ptr<Expression>> callExprs = {getFunc};
-  auto call = std::make_shared<CallExpression>(callExprs, 3);
+  auto call = std::make_shared<CallExpression>(getFunc, 3);
 
   auto get = std::make_shared<RootExpression>(
       RootExpression(InstructionType::GetIdentifier, 2,
@@ -992,10 +989,10 @@ TEST(linkGraph, setsCallDepRemaps) {
   EXPECT_NO_THROW(linker->linkGraph());
   EXPECT_EQ(linker->getErrors()->size(), 0);
 
-  ASSERT_EQ(call->depRemaps.size(), 1);
+  ASSERT_EQ(call->getActualCall().depRemaps.size(), 1);
 
-  auto remap = call->depRemaps.find(0);
-  ASSERT_NE(remap, call->depRemaps.end());
+  auto remap = call->getActualCall().depRemaps.find(0);
+  ASSERT_NE(remap, call->getActualCall().depRemaps.end());
 
   ASSERT_EQ(remap->second.size(), 1);
   EXPECT_EQ(&remap->second[0].get(), set.get());

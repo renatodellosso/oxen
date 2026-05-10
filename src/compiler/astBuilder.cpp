@@ -199,7 +199,7 @@ std::optional<std::unique_ptr<Expression>> AstBuilder::parseCompoundExpression(
     if (casted) {
 
       CallExpression call(
-          {std::move(prev.value())},
+          std::move(prev.value()),
           line); // Can't use prev->lineNumber since it's been released
 
       while (!match(TokenType::RightParen)) {

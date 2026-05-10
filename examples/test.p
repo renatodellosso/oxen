@@ -1,5 +1,7 @@
-int add(int a, int b) {
-    print a + b;
+void main() {
+    print 1;
+
+    main();
 }
 
-add(99, 101);
+main();

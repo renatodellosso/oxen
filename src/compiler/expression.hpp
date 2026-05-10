@@ -160,8 +160,7 @@ struct FunctionExpression : public Expression {
   int countInstructions() const override;
 };
 
-// First expression in expressions is the function identifier
-struct CallExpression : public BlockExpression {
+struct UnaryCallExpression : public UnaryExpression {
   // Dependent remappings - maps dependent index to subprogram IDs that that
   // dep should depend on instead of this call
   std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
@@ -169,25 +168,29 @@ struct CallExpression : public BlockExpression {
 
   std::optional<std::reference_wrapper<FunctionExpression>> function;
 
-  CallExpression() : CallExpression(-1) {}
-  CallExpression(std::vector<std::shared_ptr<Expression>> expressions,
-                 int lineNumber)
-      : BlockExpression(expressions, lineNumber), function(std::nullopt) {
+  UnaryCallExpression(int lineNumber, std::shared_ptr<Expression> root)
+      : UnaryExpression(type, lineNumber, root) {
     type = InstructionType::Call;
   }
-  CallExpression(int lineNumber)
-      : CallExpression(std::vector<std::shared_ptr<Expression>>(), lineNumber) {
-  }
 
-  std::string toString() const override;
   std::string toByteCode() const override;
-  std::vector<std::reference_wrapper<Expression>>
-  getWithSubExpressions() const override;
-  void linkInternally() override;
-  int numberExpressions(int startWith) override;
+};
+
+// First expression in expressions is the function identifier
+struct CallExpression : public BlockExpression {
+
+  std::optional<std::reference_wrapper<FunctionExpression>> function;
+
+  CallExpression(std::shared_ptr<Expression> funcName, int lineNumber)
+      : BlockExpression({}, lineNumber), function(std::nullopt) {
+    expressions.push_back(
+        std::make_shared<UnaryCallExpression>(lineNumber, funcName));
+  }
 
   std::string getFunctionName() const;
 
   // Sets function and converts argument expressions into declarations
   void setFunction(std::reference_wrapper<FunctionExpression> function);
+
+  UnaryCallExpression &getActualCall();
 };
