@@ -262,20 +262,7 @@ static std::string stringifyWrites(
 std::string FunctionExpression::toByteCode() const {
   // Subtract 1 from count to exclude this instruction
   std::string str =
-      Expression::toByteCode() + " " + returnType + " " + name + " ";
-
-  str += std::to_string(params.size()) + " ";
-  for (auto param : params) {
-    str += param.type + " " + param.name + " ";
-  }
-
-  str += stringifyUses(firstUses);
-  str += stringifyWrites(firstWrites);
-  str += stringifyUses(lastUses);
-  str += stringifyWrites(lastWrites);
-  str.erase(str.end() - 1); // Remove trailing ' '
-
-  str += "\n";
+      Expression::toByteCode() + " " + returnType + " " + name + "\n";
 
   str += body->toByteCode() + "\n";
 
