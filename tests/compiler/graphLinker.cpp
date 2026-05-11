@@ -805,8 +805,9 @@ TEST(linkGraph, linksCallDependenciesWithoutParameters) {
   ASSERT_EQ(declaration->dependents.size(), 1);
   EXPECT_EQ(&declaration->dependents[0].expr.get(), &call->getActualCall());
 
-  ASSERT_EQ(getFunc->dependencies.size(), 1);
-  EXPECT_EQ(&getFunc->dependencies[0].get(), func.get());
+  ASSERT_EQ(getFunc->dependencies.size(),
+            2); // 1st dep is the enclosing call block
+  EXPECT_EQ(&getFunc->dependencies[1].get(), func.get());
 
   ASSERT_EQ(getFunc->dependents.size(), 1);
   EXPECT_EQ(&getFunc->dependents[0].expr.get(), &call->getActualCall());

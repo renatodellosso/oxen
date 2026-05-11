@@ -209,12 +209,7 @@ void GraphLinker::processExpression(Expression &expr) {
                expr.type == InstructionType::While) {
       auto next = expressions[expr.id + 1];
       addDependency(next, expr); // Add dependency with block
-    } else if (expr.type == InstructionType::Block &&
-               (static_cast<BlockExpression *>(&expr)->expressions.size() ==
-                    0 ||
-                static_cast<BlockExpression *>(&expr)
-                        ->expressions.at(0)
-                        ->type != InstructionType::Call)) {
+    } else if (expr.type == InstructionType::Block) {
       BlockExpression &block = *static_cast<BlockExpression *>(&expr);
       int size =
           block.countInstructions() - 1; // -1 to exclude the block itself
@@ -256,6 +251,43 @@ void GraphLinker::processExpression(Expression &expr) {
           skip = body->expressions.size() + 1;
         }
       }
+
+      if (static_cast<BlockExpression *>(&expr)->expressions.size() > 0 &&
+          static_cast<BlockExpression *>(&expr)->expressions.at(0)->type ==
+              InstructionType::Call) {
+        // Function call
+
+        CallExpression &call = static_cast<CallExpression &>(expr);
+        auto name = call.getFunctionName();
+
+        auto resource = scope->get(name);
+        if (!resource)
+          throw std::runtime_error(std::format(
+              "Tried to call function '{}', but it did not exist!", name));
+        if (!resource->function)
+          throw std::runtime_error(std::format(
+              "Tried to call function '{}', but it was not a function!", name));
+
+        call.setFunction(resource->function.value());
+
+        // Maps resource names to write (true/false)
+        auto uses = std::unordered_map<std::string, bool>();
+
+        // Set all reads first
+        for (auto use : resource->function.value().get().firstUses) {
+          uses[use.first] = false;
+        }
+
+        // Then all writes
+        for (auto use : resource->function.value().get().firstWrites) {
+          uses[use.first] = true;
+        }
+
+        // Use the resources
+        for (auto resource : uses) {
+          useResource(call.getActualCall(), resource.first, resource.second);
+        }
+      }
     } else if (expr.type == InstructionType::GoTo) {
       RootExpression &root = static_cast<RootExpression &>(expr);
       int dist = std::atoi(root.token.raw.c_str());
@@ -281,40 +313,6 @@ void GraphLinker::processExpression(Expression &expr) {
         // worry Nesting multiple levels of redirects
         expressions[i].get().dependentRedirect =
             &expressions[conditionIndex].get();
-      }
-    } else if (expr.type == InstructionType::Block &&
-               static_cast<BlockExpression *>(&expr)->expressions.size() > 0 &&
-               static_cast<BlockExpression *>(&expr)->expressions.at(0)->type ==
-                   InstructionType::Call) {
-      CallExpression &call = static_cast<CallExpression &>(expr);
-      auto name = call.getFunctionName();
-
-      auto resource = scope->get(name);
-      if (!resource)
-        throw std::runtime_error(std::format(
-            "Tried to call function '{}', but it did not exist!", name));
-      if (!resource->function)
-        throw std::runtime_error(std::format(
-            "Tried to call function '{}', but it was not a function!", name));
-
-      call.setFunction(resource->function.value());
-
-      // Maps resource names to write (true/false)
-      auto uses = std::unordered_map<std::string, bool>();
-
-      // Set all reads first
-      for (auto use : resource->function.value().get().firstUses) {
-        uses[use.first] = false;
-      }
-
-      // Then all writes
-      for (auto use : resource->function.value().get().firstWrites) {
-        uses[use.first] = true;
-      }
-
-      // Use the resources
-      for (auto resource : uses) {
-        useResource(call.getActualCall(), resource.first, resource.second);
       }
     }
   } catch (std::runtime_error err) {
