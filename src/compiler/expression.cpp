@@ -345,7 +345,7 @@ std::string UnaryCallExpression::toByteCode() const {
 
     bytecode += " " + std::to_string(remap.second.size());
     for (auto dep : remap.second)
-      bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
+      bytecode += " " + std::to_string(dep.get().id + subprogramOffset - 1);
   }
 
   // Write argument offsets

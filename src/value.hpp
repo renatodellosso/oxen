@@ -15,5 +15,5 @@ struct Value {
            // with it
 };
 
-std::string valToStr(Value val);
+std::string valToStr(Value val, bool quoteStrings = false);
 bool valToBool(Value val);

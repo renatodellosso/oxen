@@ -75,13 +75,13 @@ std::string Instruction::toString() {
       scope ? scope->getDepth() : -1);
 
   for (auto arg : bytecodeArgs)
-    str += valToStr(arg) + ", ";
+    str += valToStr(arg, true) + ", ";
   if (bytecodeArgs.size() > 0)
     str = str.substr(0, str.length() - 2);
   str += "], dep args: [";
 
   for (auto arg : depArgs)
-    str += valToStr(*arg) + ", ";
+    str += valToStr(*arg, true) + ", ";
   if (depArgs.size() > 0)
     str = str.substr(0, str.length() - 2);
   str += "], dependents: [";

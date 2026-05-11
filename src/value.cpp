@@ -3,14 +3,15 @@
 #include <format>
 #include <memory>
 
-std::string valToStr(Value val) {
+std::string valToStr(Value val, bool quoteStrings) {
   switch (val.type) {
   case ValueType::Integer:
     return std::to_string(std::get<int>(val.val));
   case ValueType::Bool:
     return std::get<bool>(val.val) ? "true" : "false";
   case ValueType::String:
-    return std::format("{}", std::get<std::string>(val.val));
+    return quoteStrings ? std::format("\"{}\"", std::get<std::string>(val.val))
+                        : std::format("{}", std::get<std::string>(val.val));
   case ValueType::Identifier:
     return std::format("<identifier {}>", std::get<std::string>(val.val));
   case ValueType::Function: {

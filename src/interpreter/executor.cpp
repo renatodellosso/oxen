@@ -353,7 +353,6 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto &block = body->at(0);
     block.depsFulfilled++;
-    queue.push(block);
 
     // Handle dependency remapping
     auto res = parseDependencyRemappings(instr.bytecodeArgs);
@@ -378,8 +377,11 @@ void Executor::execSingleInstruction(Instruction &instr) {
     for (auto remap : remaps) {
       auto &arg = instr.program->at(instr.id + remap.first);
 
-      for (auto dependentIndex : remap.second)
+      for (auto dependentIndex : remap.second) {
         arg.dependents.emplace_back(&body->at(dependentIndex));
+        body->at(dependentIndex)
+            .depCount++; // Be sure to adjust depCount accordingly!
+      }
     }
 
     // Update arg declaration scopes
@@ -387,6 +389,9 @@ void Executor::execSingleInstruction(Instruction &instr) {
     for (auto argDecIndex : argDecRes.first) {
       instr.program->at(instr.id + argDecIndex).scope = block.scope;
     }
+
+    // Only push once we've relinked everything
+    queue.push(block);
 
     break;
   }
