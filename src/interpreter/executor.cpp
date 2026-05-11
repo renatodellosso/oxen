@@ -11,14 +11,15 @@
 #include <optional>
 #include <stdexcept>
 #include <thread>
+#include <utility>
 #include <variant>
 #include <vector>
 
 #define LOCATION "Executor"
 
 // Dep remaps are in the form <remap count> <dependent index> <new dependency
-// count> <new dependency ID in subprogram>
-static std::unordered_map<int, std::vector<int>>
+// count> <new dependency ID in subprogram>. Returns <remaps, new offset>
+static std::pair<std::unordered_map<int, std::vector<int>>, int>
 parseDependencyRemappings(std::vector<Value> &args) {
   int offset = 0;
   int count = std::get<int>(args[offset++].val);
@@ -37,7 +38,42 @@ parseDependencyRemappings(std::vector<Value> &args) {
     remaps[dependentIndex] = newDependencies;
   }
 
-  return remaps;
+  return std::make_pair(remaps, offset);
+}
+
+static std::pair<std::unordered_map<int, std::vector<int>>, int>
+parseArgumentRemappings(std::vector<Value> &args, int offset) {
+  int count = std::get<int>(args[offset++].val);
+
+  std::unordered_map<int, std::vector<int>> remaps;
+
+  for (int i = 0; i < count; i++) {
+    int dependentIndex = std::get<int>(args[offset++].val);
+
+    int dependencyCount = std::get<int>(args[offset++].val);
+
+    std::vector<int> newDependencies;
+    for (int j = 0; j < dependencyCount; j++)
+      newDependencies.push_back(std::get<int>(args[offset++].val));
+
+    remaps[dependentIndex] = newDependencies;
+  }
+
+  return std::make_pair(remaps, offset);
+}
+
+static std::pair<std::vector<int>, int>
+parseArgumentDeclarations(std::vector<Value> &args, int offset) {
+  int count = std::get<int>(args[offset++].val);
+
+  std::vector<int> declarations;
+
+  for (int i = 0; i < count; i++) {
+    int decIndex = std::get<int>(args[offset++].val);
+    declarations.push_back(decIndex);
+  }
+
+  return std::make_pair(declarations, offset);
 }
 
 void Executor::updateDependency(InstrDependent dep,
@@ -320,7 +356,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
     queue.push(block);
 
     // Handle dependency remapping
-    auto remaps = parseDependencyRemappings(instr.bytecodeArgs);
+    auto res = parseDependencyRemappings(instr.bytecodeArgs);
+    auto remaps = res.first;
 
     for (auto remap : remaps) {
       auto &dependent = instr.dependents[remap.first];
@@ -332,6 +369,23 @@ void Executor::execSingleInstruction(Instruction &instr) {
       dependent.instr->depCount += remap.second.size() - 1;
 
       dependent.disabled = true;
+    }
+
+    // Remap arguments
+    res = parseArgumentRemappings(instr.bytecodeArgs, res.second);
+    remaps = res.first;
+
+    for (auto remap : remaps) {
+      auto &arg = instr.program->at(instr.id + remap.first);
+
+      for (auto dependentIndex : remap.second)
+        arg.dependents.emplace_back(&body->at(dependentIndex));
+    }
+
+    // Update arg declaration scopes
+    auto argDecRes = parseArgumentDeclarations(instr.bytecodeArgs, res.second);
+    for (auto argDecIndex : argDecRes.first) {
+      instr.program->at(instr.id + argDecIndex).scope = block.scope;
     }
 
     break;

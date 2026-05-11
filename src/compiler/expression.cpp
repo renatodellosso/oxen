@@ -348,6 +348,14 @@ std::string UnaryCallExpression::toByteCode() const {
       bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
   }
 
+  // Write argument offsets
+  bytecode += " " + std::to_string(block.expressions.size() - 1);
+  for (int i = 1; i < block.expressions.size(); i++) {
+    auto expr = block.expressions[i];
+    auto declaration = std::static_pointer_cast<BinaryExpression>(expr)->left;
+    bytecode += " " + std::to_string(declaration->id - id);
+  }
+
   return bytecode;
 }
 
@@ -412,9 +420,11 @@ void CallExpression::linkInternally() {
 
   auto &actualCall = getActualCall();
 
-  // Add dependency from arguments to the call instruction
+  // Add dependency from argument declarations to the call instruction
   for (int i = 1; i < expressions.size(); i++) {
-    addDependency(*expressions[i].get(), actualCall);
+    auto &declaration =
+        std::static_pointer_cast<BinaryExpression>(expressions[i])->left;
+    addDependency(*declaration.get(), actualCall);
   }
 }
 

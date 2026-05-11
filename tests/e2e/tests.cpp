@@ -168,4 +168,10 @@ std::vector<E2eTest> tests = {
      "a = a + 1;\n"
      "main();\n",
      {"0", "1", "2"}},
+    {"CallsWorkWithArguments",
+     "void add(int a, int b) {\n"
+     "print a + b;\n"
+     "}\n"
+     "add(1, 2);",
+     {"3"}},
 };
