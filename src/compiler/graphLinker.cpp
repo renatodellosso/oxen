@@ -350,7 +350,7 @@ void GraphLinker::enterFunction(std::reference_wrapper<Expression> expr) {
   funcExprsRemaining.push(std::move(std::make_unique<int>(exprCount)));
 
   savedScopes.push(scope);
-  scope = cloneResourceScope(scope);
+  scope = std::make_shared<Scope<Resource>>(cloneResourceScope(scope));
   scopeLifetimes.push(expressions[expr.get().id + 1].get().countInstructions() +
                       1);
 

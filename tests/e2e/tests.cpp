@@ -102,6 +102,12 @@ std::vector<E2eTest> tests = {
      "void extra() { print 2; }\n"
      "}",
      {}},
+    {"FunctionsCanShadowVariablesWithParameters",
+     "int a;\n"
+     "void main(int a) { \n"
+     "print a;"
+     "}",
+     {}},
 
     // Calls
     {"CallsCallFunctions",
