@@ -2,9 +2,13 @@
 #include "token.hpp"
 #include <algorithm>
 #include <format>
+#include <functional>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 void addDependency(Expression &expr, Expression &dependsOn, int argIndex = -1) {
   expr.dependencies.push_back(dependsOn);
@@ -304,16 +308,44 @@ int FunctionExpression::countInstructions() const {
   return 1 + body->countInstructions();
 }
 
+static std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
+getCallArgMappings(const UnaryCallExpression &call) {
+  auto func = call.function->get();
+
+  std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
+      mappings;
+
+  for (int i = 0; i < func.params.size(); i++) {
+    mappings[i] = func.firstUses[func.params[i].name];
+  }
+
+  return mappings;
+}
+
 std::string UnaryCallExpression::toByteCode() const {
   std::string bytecode = UnaryExpression::toByteCode();
 
-  bytecode += " " + std::to_string(depRemaps.size());
-
   int subprogramOffset = -function.value().get().id;
 
+  // Write dependent remappings
+  bytecode += " " + std::to_string(depRemaps.size());
   for (auto remap : depRemaps) {
     bytecode += " " + std::to_string(remap.first) + " " +
                 std::to_string(remap.second.size());
+    for (auto dep : remap.second)
+      bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
+  }
+
+  // Write argument remappings
+  auto argMappings = getCallArgMappings(*this);
+  bytecode += " " + std::to_string(argMappings.size());
+  for (auto remap : argMappings) {
+    // Write offset relative to this, +1 to avoid this (the call instruction)
+    std::cout << remap.first << ": " << remap.second.size() << "\n";
+    bytecode +=
+        " " + std::to_string(block.expressions[remap.first + 1]->id - id);
+
+    bytecode += " " + std::to_string(remap.second.size());
     for (auto dep : remap.second)
       bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
   }
@@ -365,4 +397,15 @@ void CallExpression::setFunction(
 
 UnaryCallExpression &CallExpression::getActualCall() {
   return *std::static_pointer_cast<UnaryCallExpression>(expressions[0]).get();
+}
+
+void CallExpression::linkInternally() {
+  BlockExpression::linkInternally();
+
+  auto &actualCall = getActualCall();
+
+  // Add dependency from arguments to the call instruction
+  for (int i = 1; i < expressions.size(); i++) {
+    addDependency(*expressions[i].get(), actualCall);
+  }
 }

@@ -1,7 +1,5 @@
-void main() {
-    print 1;
-
-    main();
+void add(int a, int b) {
+    print a + b;
 }
 
-main();
+add(1, 2);

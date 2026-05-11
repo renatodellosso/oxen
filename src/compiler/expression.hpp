@@ -160,6 +160,8 @@ struct FunctionExpression : public Expression {
   int countInstructions() const override;
 };
 
+struct CallExpression;
+
 struct UnaryCallExpression : public UnaryExpression {
   // Dependent remappings - maps dependent index to subprogram IDs that that
   // dep should depend on instead of this call
@@ -167,9 +169,11 @@ struct UnaryCallExpression : public UnaryExpression {
       depRemaps;
 
   std::optional<std::reference_wrapper<FunctionExpression>> function;
+  CallExpression &block;
 
-  UnaryCallExpression(int lineNumber, std::shared_ptr<Expression> root)
-      : UnaryExpression(type, lineNumber, root) {
+  UnaryCallExpression(CallExpression &block, int lineNumber,
+                      std::shared_ptr<Expression> root)
+      : UnaryExpression(type, lineNumber, root), block(block) {
     type = InstructionType::Call;
   }
 
@@ -184,7 +188,7 @@ struct CallExpression : public BlockExpression {
   CallExpression(std::shared_ptr<Expression> funcName, int lineNumber)
       : BlockExpression({}, lineNumber), function(std::nullopt) {
     expressions.push_back(
-        std::make_shared<UnaryCallExpression>(lineNumber, funcName));
+        std::make_shared<UnaryCallExpression>(*this, lineNumber, funcName));
   }
 
   std::string getFunctionName() const;
@@ -193,4 +197,6 @@ struct CallExpression : public BlockExpression {
   void setFunction(std::reference_wrapper<FunctionExpression> function);
 
   UnaryCallExpression &getActualCall();
+
+  void linkInternally() override;
 };

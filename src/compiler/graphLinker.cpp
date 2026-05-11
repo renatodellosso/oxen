@@ -366,7 +366,7 @@ void GraphLinker::exitFunction() {
     if (resource->function && &resource->function->get() == &function->get())
       continue;
 
-    // Don't add params to first/last uses/writes
+    // Don't add params to last uses/writes
     bool isParam = false;
     for (auto param : function->get().params) {
       if (param.name == key) {
@@ -375,13 +375,12 @@ void GraphLinker::exitFunction() {
       }
     }
 
-    if (isParam)
-      continue;
-
-    if (resource->lastWrittenBy)
-      function->get().lastWrites.emplace(key, *resource->lastWrittenBy);
-    if (resource->currAccesses.size())
-      function->get().lastUses[key] = resource->currAccesses;
+    if (!isParam) {
+      if (resource->lastWrittenBy)
+        function->get().lastWrites.emplace(key, *resource->lastWrittenBy);
+      if (resource->currAccesses.size())
+        function->get().lastUses[key] = resource->currAccesses;
+    }
 
     if (!function->get().firstUses.contains(key)) {
       // This is our first use/write
