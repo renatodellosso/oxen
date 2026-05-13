@@ -80,8 +80,12 @@ std::string Instruction::toString() {
     str = str.substr(0, str.length() - 2);
   str += "], dep args: [";
 
-  for (auto arg : depArgs)
-    str += valToStr(*arg, true) + ", ";
+  for (auto arg : depArgs) {
+    if (arg)
+      str += valToStr(*arg, true) + ", ";
+    else
+      str += "<error - nullptr value>, ";
+  }
   if (depArgs.size() > 0)
     str = str.substr(0, str.length() - 2);
   str += "], dependents: [";

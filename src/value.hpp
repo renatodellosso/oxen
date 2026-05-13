@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <variant>
@@ -10,7 +11,8 @@ enum class ValueType { String, Integer, Bool, Identifier, Function };
 
 struct Value {
   ValueType type;
-  std::variant<std::string, int, bool, std::shared_ptr<Function>>
+  std::variant<std::string, int, bool,
+               std::shared_ptr<Function>>
       val; // Can't just do Function since forward declarations cause issues
            // with it
 };

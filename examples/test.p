@@ -1,7 +1,8 @@
-int a = 0;
-
-void main(int a) {
+void add(bool a) {
     print a;
+    if (a) {
+        add(false);
+    }
 }
 
-main(a + 1);
+add(true);

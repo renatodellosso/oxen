@@ -395,6 +395,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
         arg.dependents.emplace_back(&body->at(dependentIndex));
         body->at(dependentIndex)
             .depCount++; // Be sure to adjust depCount accordingly!
+
+        if (cliArgs.verbose)
+          log(LOCATION, "Made {} depend on {}",
+              body->at(dependentIndex).toString(), arg.toString());
       }
     }
 
