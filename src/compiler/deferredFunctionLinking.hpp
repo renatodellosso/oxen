@@ -1,24 +1,23 @@
 #pragma once
 
-#include "../interpreter/function.hpp"
-#include "resource.hpp"
-#include <memory>
+#include "expression.hpp"
+#include <functional>
 
-struct DeferredFunctionLinking {
-  std::shared_ptr<Function> function;
-  std::shared_ptr<Scope<Resource>> scope;
-
-  bool operator==(const DeferredFunctionLinking &other) const {
-    return function.get() == other.function.get();
+// Custom hasher and equality
+namespace std {
+template <> struct hash<std::reference_wrapper<FunctionExpression>> {
+  std::size_t operator()(
+      const std::reference_wrapper<FunctionExpression> &defer) const noexcept {
+    // Reinterpret the memory address as a size_t
+    return reinterpret_cast<size_t>(&defer.get());
   }
 };
 
-// Custom hasher for DeferredFunctionLinking
-namespace std {
-template <> struct hash<DeferredFunctionLinking> {
-  std::size_t operator()(const DeferredFunctionLinking &defer) const noexcept {
-    // Reinterpret the memory address as a size_t
-    return reinterpret_cast<size_t>(defer.function.get());
+template <> struct equal_to<std::reference_wrapper<FunctionExpression>> {
+  bool operator()(
+      const std::reference_wrapper<FunctionExpression> &a,
+      const std::reference_wrapper<FunctionExpression> &b) const noexcept {
+    return &a.get() == &b.get();
   }
 };
 } // namespace std

@@ -1,5 +1,6 @@
 #pragma once
 
+// Ignore the warning, we need it for the set
 #include "deferredFunctionLinking.hpp"
 #include "expression.hpp"
 #include "resource.hpp"
@@ -23,7 +24,8 @@ class GraphLinker {
   std::stack<std::unique_ptr<int>> funcExprsRemaining;
   std::stack<std::shared_ptr<Scope<Resource>>> savedScopes;
 
-  std::unordered_set<DeferredFunctionLinking> deferredFunctionLinkings;
+  std::unordered_set<std::reference_wrapper<FunctionExpression>>
+      deferredFunctionLinkings;
 
   Resource &createResource(std::string name);
 

@@ -271,23 +271,31 @@ void GraphLinker::processExpression(Expression &expr) {
 
         call.setFunction(resource->function.value());
 
-        // Maps resource names to write (true/false)
-        auto uses = std::unordered_map<std::string, bool>();
+        if (!call.function->get().finishedLinking) {
+          // Defer linking
 
-        // Set all reads first
-        // Use last instead of first since params are only present in last
-        for (auto use : resource->function.value().get().lastUses) {
-          uses[use.first] = false;
-        }
+          // Only relink the immediately enclosing function, not the function
+          // that trigger the deferment
+          deferredFunctionLinkings.insert(function.value().get());
+        } else {
+          // Maps resource names to write (true/false)
+          auto uses = std::unordered_map<std::string, bool>();
 
-        // Then all writes
-        for (auto use : resource->function.value().get().lastWrites) {
-          uses[use.first] = true;
-        }
+          // Set all reads first
+          // Use last instead of first since params are only present in last
+          for (auto use : resource->function.value().get().lastUses) {
+            uses[use.first] = false;
+          }
 
-        // Use the resources
-        for (auto resource : uses) {
-          useResource(call.getActualCall(), resource.first, resource.second);
+          // Then all writes
+          for (auto use : resource->function.value().get().lastWrites) {
+            uses[use.first] = true;
+          }
+
+          // Use the resources
+          for (auto resource : uses) {
+            useResource(call.getActualCall(), resource.first, resource.second);
+          }
         }
       }
     } else if (expr.type == InstructionType::GoTo) {
@@ -354,6 +362,8 @@ void GraphLinker::enterFunction(std::reference_wrapper<Expression> expr) {
   scope = std::make_shared<Scope<Resource>>(cloneResourceScope(scope));
   scopeLifetimes.push(expressions[expr.get().id + 1].get().countInstructions() +
                       1);
+
+  function->get().scope = scope;
 
   for (auto param : function->get().params)
     createResource(param.name);

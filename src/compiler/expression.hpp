@@ -123,6 +123,8 @@ struct FunctionExprParameter {
   std::string name;
 };
 
+struct Resource;
+
 struct FunctionExpression : public Expression {
   std::string name;
   std::string returnType;
@@ -130,6 +132,7 @@ struct FunctionExpression : public Expression {
   std::shared_ptr<Expression> body;
 
   bool finishedLinking;
+  std::shared_ptr<Scope<Resource>> scope;
 
   // Each entry is a resource name and the set of expressions that first use it
   // before a set (if it's immediately set, this will just contain the setting
