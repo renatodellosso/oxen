@@ -3,6 +3,11 @@
 #include <memory>
 #include <vector>
 
+static GraphLinker* makeGraphLinker(std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprs) {
+  CliArgs args = {};
+  return new GraphLinker(args, exprs);
+}
+
 TEST(constructor, createsDefaultResources) {
   GraphLinker *linker = new GraphLinker(
       std::make_shared<std::vector<std::shared_ptr<Expression>>>());

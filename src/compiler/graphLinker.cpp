@@ -69,9 +69,10 @@ addDependency(Expression &expr, Expression &dependsOn,
   }
 }
 
-GraphLinker::GraphLinker(
+GraphLinker::GraphLinker(const CliArgs &cliArgs,
     std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector)
-    : errors(std::make_shared<std::vector<SyntaxError>>(
+    : cliArgs(cliArgs),
+      errors(std::make_shared<std::vector<SyntaxError>>(
           std::vector<SyntaxError>())),
       scope(std::make_shared<Scope<Resource>>()), scopeLifetimes(),
       function(std::nullopt), funcExprsRemaining() {
@@ -86,6 +87,10 @@ GraphLinker::GraphLinker(
   createResource("bool");
   createResource("string");
 }
+
+GraphLinker::GraphLinker(std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector)
+    : GraphLinker(CliArgs{}, exprVector) {}
+
 
 Resource &GraphLinker::createResource(std::string name) {
   Resource resource(name);

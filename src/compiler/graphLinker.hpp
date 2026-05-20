@@ -12,8 +12,10 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include "../cliUtils.hpp"
 
 class GraphLinker {
+  CliArgs cliArgs;
   std::shared_ptr<std::vector<SyntaxError>> errors;
   // std::unordered_map<std::string, Resource> resources;
   std::shared_ptr<Scope<Resource>> scope;
@@ -46,8 +48,9 @@ class GraphLinker {
   void linkIteration(std::reference_wrapper<Expression> expr);
 
 public:
-  GraphLinker(
-      std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
+  GraphLinker(const CliArgs &cliArgs,
+              std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
+  GraphLinker(std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
   void linkGraph();
   std::shared_ptr<std::vector<SyntaxError>> getErrors();
   std::unordered_map<std::string, std::shared_ptr<Resource>> &getResources();

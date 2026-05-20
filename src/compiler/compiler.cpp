@@ -46,7 +46,7 @@ compile(const CliArgs &args, std::istream &inputStream,
   if (shouldLog)
     log(LOCATION, "Numbered expressions");
 
-  GraphLinker graphLinker(astBuilder.getExpressions());
+  GraphLinker graphLinker(args, astBuilder.getExpressions());
   graphLinker.linkGraph();
 
   errors = graphLinker.getErrors();
