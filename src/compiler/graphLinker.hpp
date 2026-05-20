@@ -27,6 +27,7 @@ class GraphLinker {
 
   std::unordered_set<std::reference_wrapper<FunctionExpression>>
       deferredFunctionLinkings;
+  bool processingDeferred;
 
   Resource &createResource(std::string name);
 
@@ -41,6 +42,8 @@ class GraphLinker {
   void exitFunction();
 
   void syntaxError(int line, std::string msg);
+
+  void linkIteration(std::reference_wrapper<Expression> expr);
 
 public:
   GraphLinker(

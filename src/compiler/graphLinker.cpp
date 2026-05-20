@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <format>
 #include <functional>
-#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -147,7 +146,8 @@ void GraphLinker::useResource(Expression &expr, std::string name, bool write) {
     if (function &&
         // (!resource.function || &resource.function->get() != &function->get())
         // &&
-        !function->get().firstUses.contains(name)) {
+        !function->get().firstUses.contains(name) &&
+        function->get().scope->get(name) == scope->get(name)) {
       // This is our first write
       function->get().firstUses[name] = resource.currAccesses;
       function->get().firstWrites.emplace(name, expr);
@@ -273,11 +273,6 @@ void GraphLinker::processExpression(Expression &expr) {
         call.setFunction(resource->function.value());
 
         if (!call.function->get().finishedLinking) {
-          std::cout << "Deferring " << function->get().toString() << "\n";
-          std::cout << "\tCall: " << call.toString() << "\n";
-          std::cout << "\tCall Function: " << call.function->get().toString()
-                    << "\n";
-
           // Defer linking
 
           // Only relink the immediately enclosing function, not the function
@@ -383,6 +378,10 @@ void GraphLinker::exitFunction() {
   for (auto key : scope->getKeys()) {
     auto resource = scope->get(key);
 
+    // Skip resources created inside function
+    if (resource != function->get().scope->get(key))
+      continue;
+
     // Don't add params to last uses/writes
     bool isParam = false;
     for (auto param : function->get().params) {
@@ -435,21 +434,25 @@ void GraphLinker::syntaxError(int line, std::string msg) {
   errors.get()->push_back({line, msg});
 }
 
+void GraphLinker::linkIteration(std::reference_wrapper<Expression> expr) {
+  if (expr.get().type == InstructionType::Function)
+    enterFunction(expr);
+
+  updateScopeLifetimes();
+  processExpression(expr);
+  expr.get().linkInternally();
+
+  if (!funcExprsRemaining.empty()) {
+    (*funcExprsRemaining.top().get())--;
+    while (!funcExprsRemaining.empty() && *funcExprsRemaining.top() <= 0) {
+      exitFunction();
+    }
+  }
+}
+
 void GraphLinker::linkGraph() {
   for (auto expr : expressions) {
-    if (expr.get().type == InstructionType::Function)
-      enterFunction(expr);
-
-    updateScopeLifetimes();
-    processExpression(expr);
-    expr.get().linkInternally();
-
-    if (!funcExprsRemaining.empty()) {
-      (*funcExprsRemaining.top().get())--;
-      while (!funcExprsRemaining.empty() && *funcExprsRemaining.top() <= 0) {
-        exitFunction();
-      }
-    }
+    linkIteration(expr);
   }
 
   // Exit any remaining functions

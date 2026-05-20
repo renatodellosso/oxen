@@ -22,6 +22,7 @@ public:
 
   std::shared_ptr<T> alloc(std::string key, T val = {});
   std::shared_ptr<T> get(std::string key);
+  bool contains(std::string key);
 
   int getDepth() const;
   std::shared_ptr<Scope> getEnclosing();
@@ -68,6 +69,22 @@ template <class T> inline std::shared_ptr<T> Scope<T>::get(std::string key) {
   }
 
   return it->second;
+}
+
+template <class T> inline bool Scope<T>::contains(std::string key) {
+  std::shared_lock<std::shared_mutex> lock(mutex);
+  auto it = vars.find(key);
+  lock.unlock(); // Unlock early since we're done reading from vars
+
+  if (it == vars.end()) {
+    // Not found here
+    if (enclosing)
+      return enclosing->contains(key);
+    else
+      return false;
+  }
+
+  return true;
 }
 
 template <class T> inline int Scope<T>::getDepth() const {
