@@ -1,10 +1,10 @@
 #include "graphLinker.hpp"
+#include "../logging.hpp"
 #include "expression.hpp"
 #include "resource.hpp"
-#include <algorithm>
+#include <cmath>
 #include <format>
 #include <functional>
-#include <iterator>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -69,17 +69,19 @@ addDependency(Expression &expr, Expression &dependsOn,
   }
 }
 
-GraphLinker::GraphLinker(const CliArgs &cliArgs,
+GraphLinker::GraphLinker(
+    const CliArgs &cliArgs,
     std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector)
-    : cliArgs(cliArgs),
-      errors(std::make_shared<std::vector<SyntaxError>>(
-          std::vector<SyntaxError>())),
+    : cliArgs(cliArgs), errors(std::make_shared<std::vector<SyntaxError>>(
+                            std::vector<SyntaxError>())),
       scope(std::make_shared<Scope<Resource>>()), scopeLifetimes(),
       function(std::nullopt), funcExprsRemaining() {
-  expressions = std::vector<std::reference_wrapper<Expression>>();
+  expressions = std::map<int, std::reference_wrapper<Expression>>();
   for (auto expr : *exprVector.get()) {
     auto vec = expr->getWithSubExpressions();
-    std::move(vec.begin(), vec.end(), std::back_inserter(expressions));
+    for (auto e : vec) {
+      expressions.emplace(e.get().id, e);
+    }
   }
 
   // Init default resources
@@ -88,9 +90,9 @@ GraphLinker::GraphLinker(const CliArgs &cliArgs,
   createResource("string");
 }
 
-GraphLinker::GraphLinker(std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector)
+GraphLinker::GraphLinker(
+    std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector)
     : GraphLinker(CliArgs{}, exprVector) {}
-
 
 Resource &GraphLinker::createResource(std::string name) {
   Resource resource(name);
@@ -214,8 +216,8 @@ void GraphLinker::processExpression(Expression &expr) {
       }
     } else if (expr.type == InstructionType::If ||
                expr.type == InstructionType::While) {
-      auto next = expressions[expr.id + 1];
-      addDependency(next, expr); // Add dependency with block
+      auto next = expressions.find(expr.id + 1);
+      addDependency(next->second, expr); // Add dependency with block
     } else if (expr.type == InstructionType::Block) {
       BlockExpression &block = *static_cast<BlockExpression *>(&expr);
       int size =
@@ -236,13 +238,13 @@ void GraphLinker::processExpression(Expression &expr) {
         }
 
         // Handle nested blocks
-        auto inner = expressions[expr.id + i + 1];
+        auto inner = expressions.find(expr.id + i + 1)->second;
         if (inner.get().type == InstructionType::Block) {
           skip = static_cast<BlockExpression *>(&expr)->expressions.size();
         }
 
         // Only add dependencies to root-level expressions, blocks, and
-        // functions All other exprs will have intra-block dependencies that
+        // functions. All other exprs will have intra-block dependencies that
         // already depend on the block instruction
         if (inner.get().type != InstructionType::Block &&
             inner.get().type != InstructionType::Function &&
@@ -254,7 +256,7 @@ void GraphLinker::processExpression(Expression &expr) {
         if (inner.get().type == InstructionType::Function) {
           // Skip that function's block
           auto body = static_cast<BlockExpression *>(
-              &expressions[inner.get().id + 1].get());
+              &expressions.find(inner.get().id + 1)->second.get());
           skip = body->expressions.size() + 1;
         }
       }
@@ -282,6 +284,9 @@ void GraphLinker::processExpression(Expression &expr) {
 
           // Only relink the immediately enclosing function, not the function
           // that trigger the deferment
+          if (cliArgs.verbose)
+            log("GraphLinker", "Deferring linking for function '{}'...",
+                function->get().name);
           deferredFunctionLinkings.insert(function.value().get());
         } else {
           // Maps resource names to write (true/false)
@@ -315,7 +320,8 @@ void GraphLinker::processExpression(Expression &expr) {
       for (int i = returnTo; i < expr.id; i++) {
         // Skip everything before the if statement
         if (conditionIndex == -1) {
-          if (expressions[i].get().type == InstructionType::While) {
+          if (expressions.find(i)->second.get().type ==
+              InstructionType::While) {
             conditionIndex = i;
           }
           continue;
@@ -323,12 +329,12 @@ void GraphLinker::processExpression(Expression &expr) {
 
         // Don't a dependency to the block since we'll already have one
         if (i != conditionIndex + 1)
-          addDependency(expr, expressions[i]);
+          addDependency(expr, expressions.find(i)->second);
 
         // We've already linked everything in the loop body, so we don't have to
         // worry Nesting multiple levels of redirects
-        expressions[i].get().dependentRedirect =
-            &expressions[conditionIndex].get();
+        expressions.find(i)->second.get().dependentRedirect =
+            &expressions.find(conditionIndex)->second.get();
       }
     }
   } catch (std::runtime_error err) {
@@ -369,8 +375,9 @@ void GraphLinker::enterFunction(std::reference_wrapper<Expression> expr) {
 
   savedScopes.push(scope);
   scope = std::make_shared<Scope<Resource>>(cloneResourceScope(scope));
-  scopeLifetimes.push(expressions[expr.get().id + 1].get().countInstructions() +
-                      1);
+  scopeLifetimes.push(
+      expressions.find(expr.get().id + 1)->second.get().countInstructions() +
+      1);
 
   function->get().scope = scope;
 
@@ -455,14 +462,38 @@ void GraphLinker::linkIteration(std::reference_wrapper<Expression> expr) {
   }
 }
 
+void GraphLinker::linkDeferred() {
+  if (cliArgs.verbose)
+    log("GraphLinker", "Linking {} deferred functions",
+        deferredFunctionLinkings.size());
+
+  processingDeferred = true;
+
+  expressions = std::map<int, std::reference_wrapper<Expression>>();
+  for (auto &func : deferredFunctionLinkings) {
+    auto subExprs = func.get().getWithSubExpressions();
+    for (auto &e : subExprs)
+      expressions.emplace(e.get().id, e);
+  }
+
+  for (auto expr : expressions) {
+    linkIteration(expr.second);
+  }
+
+  while (function.has_value())
+    exitFunction();
+}
+
 void GraphLinker::linkGraph() {
   for (auto expr : expressions) {
-    linkIteration(expr);
+    linkIteration(expr.second);
   }
 
   // Exit any remaining functions
   while (function.has_value())
     exitFunction();
+
+  linkDeferred();
 }
 
 std::shared_ptr<std::vector<SyntaxError>> GraphLinker::getErrors() {

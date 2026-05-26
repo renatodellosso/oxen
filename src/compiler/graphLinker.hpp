@@ -1,25 +1,28 @@
 #pragma once
 
+#include "../cliUtils.hpp"
 // Ignore the warning, we need it for the set
 #include "deferredFunctionLinking.hpp"
 #include "expression.hpp"
 #include "resource.hpp"
 #include "syntaxError.hpp"
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <stack>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include "../cliUtils.hpp"
+#include <vector>
 
 class GraphLinker {
   CliArgs cliArgs;
+
   std::shared_ptr<std::vector<SyntaxError>> errors;
-  // std::unordered_map<std::string, Resource> resources;
   std::shared_ptr<Scope<Resource>> scope;
-  std::vector<std::reference_wrapper<Expression>> expressions;
+  // We need an ordered map
+  std::map<int, std::reference_wrapper<Expression>> expressions;
   std::stack<int> scopeLifetimes;
 
   std::optional<std::reference_wrapper<FunctionExpression>> function;
@@ -48,9 +51,12 @@ class GraphLinker {
   void linkIteration(std::reference_wrapper<Expression> expr);
 
 public:
-  GraphLinker(const CliArgs &cliArgs,
-              std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
-  GraphLinker(std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
+  GraphLinker(
+      const CliArgs &cliArgs,
+      std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
+  GraphLinker(
+      std::shared_ptr<std::vector<std::shared_ptr<Expression>>> exprVector);
+  void linkDeferred();
   void linkGraph();
   std::shared_ptr<std::vector<SyntaxError>> getErrors();
   std::unordered_map<std::string, std::shared_ptr<Resource>> &getResources();

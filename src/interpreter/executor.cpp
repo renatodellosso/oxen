@@ -81,17 +81,6 @@ void Executor::updateDependency(InstrDependent dep,
   if (dep.disabled)
     return;
 
-  int fulfilled;
-
-  // Smaller scope so the lock guard is cleaned up
-  {
-    std::lock_guard<std::mutex> fulfilledLock(
-        depsFulfilledMutexes[dep.instr->id]);
-
-    dep.instr->depsFulfilled++;
-    fulfilled = dep.instr->depsFulfilled;
-  }
-
   if (dep.argIndex.has_value()) {
     std::lock_guard<std::mutex> argLock(depArgsMutexes[dep.instr->id]);
 
@@ -103,6 +92,18 @@ void Executor::updateDependency(InstrDependent dep,
       depVec.resize(i + 1);
 
     depVec[i] = result;
+  }
+
+  // Update fulfilled after setting args so other threads don't trigger
+  int fulfilled;
+
+  // Smaller scope so the lock guard is cleaned up
+  {
+    std::lock_guard<std::mutex> fulfilledLock(
+        depsFulfilledMutexes[dep.instr->id]);
+
+    dep.instr->depsFulfilled++;
+    fulfilled = dep.instr->depsFulfilled;
   }
 
   if (fulfilled == dep.instr->depCount) {

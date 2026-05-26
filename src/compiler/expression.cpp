@@ -364,12 +364,12 @@ static std::shared_ptr<Expression>
 convertToDeclaration(std::shared_ptr<Expression> origExpr) {
   std::shared_ptr<Expression> type = std::make_shared<RootExpression>(
       InstructionType::GetIdentifier, origExpr->lineNumber,
-      Token({TokenType::Identifier, TokenSubtype::None, "type unset",
+      Token({TokenType::Identifier, TokenSubtype::None, "param type unset",
              origExpr->lineNumber}));
 
   std::shared_ptr<Expression> name = std::make_shared<RootExpression>(
       InstructionType::GetLiteral, origExpr->lineNumber,
-      Token({TokenType::Literal, TokenSubtype::String, "name unset",
+      Token({TokenType::Literal, TokenSubtype::String, "param name unset",
              origExpr->lineNumber}));
 
   std::shared_ptr<Expression> declaration = std::make_shared<BinaryExpression>(
