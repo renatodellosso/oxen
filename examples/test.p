@@ -1,6 +1,11 @@
-int var;
-{
-    int var;
-    var;
+void outer(bool x) {
+    void inner(bool x) {
+        outer(false);
+    }
+    
+    print x;
+    if (x)
+        inner(true);
 }
-var;
+
+outer(true);

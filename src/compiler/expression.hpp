@@ -2,6 +2,7 @@
 
 #include "../instruction.hpp"
 #include "token.hpp"
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -20,6 +21,26 @@ struct ExprDependent {
   ExprDependent(Expression &expr);
   std::string toString();
 };
+
+// Custom hasher and equality
+namespace std {
+template <> struct hash<ExprDependent> {
+  std::size_t operator()(
+      const ExprDependent &defer) const noexcept {
+    // Reinterpret the memory address as a size_t
+    return reinterpret_cast<size_t>(&defer.expr.get());
+  }
+};
+
+template <> struct equal_to<ExprDependent> {
+  bool
+  operator()(const ExprDependent &a,
+             const ExprDependent &b) const noexcept {
+    return &a.expr.get() == &b.expr.get() &&
+           a.argIndex.value_or(-1) == b.argIndex.value_or(-1);
+  }
+};
+} // namespace std
 
 struct Expression {
   InstructionType type;
