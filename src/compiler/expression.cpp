@@ -301,6 +301,7 @@ int FunctionExpression::countInstructions() const {
   return 1 + body->countInstructions();
 }
 
+// Maps param index to first uses vector
 static std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
 getCallArgMappings(const UnaryCallExpression &call) {
   auto func = call.function->get();
@@ -315,6 +316,10 @@ getCallArgMappings(const UnaryCallExpression &call) {
   return mappings;
 }
 
+// Bytecode args are in format "[dependency remapping count] [[param index]
+// [dependent count] [dependent subprogram ID]] [argument remapping count]
+// [[argument ID relative to call] [first uses count] [first use subprogram ID]]
+// [argument count] [[argument offset relative to call]]"
 std::string UnaryCallExpression::toByteCode() const {
   std::string bytecode = UnaryExpression::toByteCode();
 

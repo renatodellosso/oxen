@@ -288,6 +288,7 @@ void GraphLinker::processExpression(Expression &expr) {
           if (cliArgs.verbose)
             log(LOCATION, "Deferring linking for function '{}'...",
                 function->get().name);
+          function->get().deferred = true;
           deferredFunctionLinkings.insert(function.value().get());
         } else {
           // Maps resource names to write (true/false)
@@ -352,6 +353,8 @@ void GraphLinker::enterFunction(std::reference_wrapper<Expression> expr) {
       std::make_optional<std::reference_wrapper<FunctionExpression>>(
           static_cast<FunctionExpression &>(expr.get()));
 
+  tempFunc->get().deferred = false;
+
   // Create function resource in outer scope (use auto & instead of just auto so
   // as not to make a copy!)
   auto name = tempFunc->get().name;
@@ -398,8 +401,7 @@ void GraphLinker::exitFunction() {
     // Don't add params to last uses/writes
     bool isParam = false;
     for (auto param : function->get().params) {
-      if (param.name == key &&
-          scope->getEnclosing()->getKeys().contains((param.name))) {
+      if (param.name == key && scope->getKeys().contains((param.name))) {
         isParam = true;
         break;
       }
@@ -427,7 +429,7 @@ void GraphLinker::exitFunction() {
     }
   }
 
-  if (cliArgs.verbose) {
+  if (cliArgs.verbose && !function->get().deferred) {
     std::string msg = "";
 
     std::unordered_map<std::string, bool> isWrite;

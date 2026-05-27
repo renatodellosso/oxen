@@ -152,7 +152,7 @@ struct FunctionExpression : public Expression {
   std::vector<FunctionExprParameter> params;
   std::shared_ptr<Expression> body;
 
-  bool finishedLinking;
+  bool finishedLinking, deferred;
   std::shared_ptr<Scope<Resource>> scope;
 
   // Each entry is a resource name and the set of expressions that first use it

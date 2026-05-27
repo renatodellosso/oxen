@@ -255,7 +255,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
                                            std::get<int>(right->val));
     } else
       throw std::runtime_error(
-          std::format("Invalid arg types on instruction {}: {}", instr.id,
+          std::format("Invalid arg types on instruction {}: {}, {}", instr.id,
                       (int)left->type, (int)right->type));
 
     break;
@@ -270,7 +270,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
                                            std::get<int>(right->val));
     } else
       throw std::runtime_error(
-          std::format("Invalid arg types on instruction {}: {}", instr.id,
+          std::format("Invalid arg types on instruction {}: {}, {}", instr.id,
                       (int)left->type, (int)right->type));
 
     break;
@@ -285,7 +285,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
                                            std::get<int>(right->val));
     } else
       throw std::runtime_error(
-          std::format("Invalid arg types on instruction {}: {}", instr.id,
+          std::format("Invalid arg types on instruction {}: {}, {}", instr.id,
                       (int)left->type, (int)right->type));
 
     break;

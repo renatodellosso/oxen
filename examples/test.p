@@ -1,12 +1,14 @@
-void outer(bool x) {
+void outer(int x) {
     void inner(bool y) {
-        outer(false);
+        outer(0);
     }
 
-    print x;
+    print x - 1;
     
     if (x)
         inner(true);
+
+    print x + 1;
 }
 
-outer(true);
+outer(5);
