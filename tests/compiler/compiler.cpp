@@ -32,6 +32,14 @@ TEST(compile, compilesBasicProgram) {
                              (int)InstructionType::Add));
 }
 
+TEST(compile, compilesEqualsExpressions) {
+  auto out = testCompile("1 == 1");
+  EXPECT_EQ(out, std::format("0 2.0 {} 1\n0 2.1 {} 1\n2  {}",
+                             (int)InstructionType::GetLiteral,
+                             (int)InstructionType::GetLiteral,
+                             (int)InstructionType::CompareEquals));
+}
+
 TEST(compile, compilesMultilineProgram) {
   auto out = testCompile("1 + 1;\n1 - 2");
   EXPECT_EQ(

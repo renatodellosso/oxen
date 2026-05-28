@@ -31,6 +31,19 @@ std::vector<E2eTest> tests = {
     {"DivisionWorksWhenNotCleanlyDivisible", "print 3 / 2;", {"1"}},
     {"DivisionWorksWithNegativeNumbers", "print 1 / -1;", {"-1"}},
 
+    // Equality
+    {"EqualityWorksWithEqualNumbers", "print 1 == 1;", {"true"}},
+    {"EqualityWorksWithUnequalNumbers", "print 1 == 2;", {"false"}},
+    {"EqualityWorksWithEqualStrings", "print \"a\" == \"a\";", {"true"}},
+    {"EqualityWorksWithUnequalStrings", "print \"a\" == \"b\";", {"false"}},
+    {"EqualityWorksWithEqualBools", "print true == true;", {"true"}},
+    {"EqualityWorksWithUnequalBools", "print true == false;", {"false"}},
+    {"EqualityDefaultsToFalseForMixedTypes", "print 1 == true;", {"false"}},
+    {"EqualityWorksInConditions",
+     "int count = 0;\n"
+     "if (count == 0) print \"done\";",
+     {"done"}},
+
     // Variables
     {"VariablesCanBeDeclared", "int a;", {}},
     {"VariablesCanBeDeclaredAndInitialized", "int a = 1;\nprint a;", {"1"}},

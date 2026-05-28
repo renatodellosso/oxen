@@ -58,6 +58,34 @@ TEST(AstBuilder, buildsBinaryExpressions) {
   EXPECT_TOKEN_EQ(right->token, tokens[2]);
 }
 
+TEST(AstBuilder, buildsEqualsExpressions) {
+  std::vector<Token> tokens = {
+      {TokenType::Literal, TokenSubtype::Integer, "1", 1},
+      {TokenType::EqualsEquals, TokenSubtype::None, "==", 1},
+      {TokenType::Literal, TokenSubtype::Integer, "1", 1},
+      {TokenType::Semicolon, TokenSubtype::None, ";", 1}};
+
+  AstBuilder builder(std::make_unique<std::vector<Token>>(tokens));
+
+  builder.build();
+
+  EXPECT_EQ(builder.getErrors().get()->size(), 0);
+
+  auto expressions = *builder.getExpressions().get();
+  ASSERT_EQ(expressions.size(), 1);
+
+  auto expr = expressions[0].get();
+  EXPECT_EQ(expr->type, InstructionType::CompareEquals);
+
+  BinaryExpression *binary = static_cast<BinaryExpression *>(expr);
+  RootExpression *left = static_cast<RootExpression *>(binary->left.get());
+  RootExpression *right = static_cast<RootExpression *>(binary->right.get());
+
+  EXPECT_EQ(binary->type, InstructionType::CompareEquals);
+  EXPECT_TOKEN_EQ(left->token, tokens[0]);
+  EXPECT_TOKEN_EQ(right->token, tokens[2]);
+}
+
 TEST(AstBuilder, buildsDeclarations) {
   std::vector<Token> tokens = {
       {TokenType::Identifier, TokenSubtype::None, "int", 1},

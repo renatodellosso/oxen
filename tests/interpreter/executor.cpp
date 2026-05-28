@@ -26,6 +26,48 @@ std::vector<Instruction> getInstrs() {
   return instrs;
 }
 
+std::vector<Instruction> getCompareInstrs(Value left, Value right,
+                                          bool printResult = true) {
+  std::vector<Instruction> instrs = printResult
+                                        ? std::vector<Instruction>{
+                                              Instruction(0), Instruction(1),
+                                              Instruction(2), Instruction(3)}
+                                        : std::vector<Instruction>{
+                                              Instruction(0), Instruction(1),
+                                              Instruction(2)};
+
+  instrs[0].type = InstructionType::GetLiteral;
+  instrs[0].bytecodeArgs.push_back(left);
+  instrs[0].dependents.push_back(InstrDependent(&instrs[2], 0));
+
+  instrs[1].type = InstructionType::GetLiteral;
+  instrs[1].bytecodeArgs.push_back(right);
+  instrs[1].dependents.push_back(InstrDependent(&instrs[2], 1));
+
+  instrs[2].type = InstructionType::CompareEquals;
+  instrs[2].depCount = 2;
+
+  if (printResult) {
+    instrs[2].dependents.push_back(InstrDependent(&instrs[3], 0));
+    instrs[3].type = InstructionType::Print;
+    instrs[3].depCount = 1;
+  }
+
+  return instrs;
+}
+
+std::string runCompare(Value left, Value right) {
+  auto instrs = getCompareInstrs(left, right);
+  Subprogram program(std::make_shared<std::vector<Instruction>>(instrs));
+
+  Executor executor({.threads = 1}, program);
+  DISABLE_COUT
+  executor.startExecution();
+  auto output = REENABLE_COUT
+
+  return output;
+}
+
 TEST(startExecution, doesntError) {
   DISABLE_COUT
 
@@ -56,6 +98,57 @@ TEST(startExecution, populatesDepArgs) {
   EXPECT_EQ(instr->depArgs[1]->type, ValueType::Integer);
   EXPECT_EQ(instr->depArgs[1]->val, instrs[1].bytecodeArgs[0].val);
 
+  REENABLE_COUT
+}
+
+TEST(startExecution, compareEqualsComparesIntegers) {
+  EXPECT_EQ(runCompare({.type = ValueType::Integer, .val = 1},
+                       {.type = ValueType::Integer, .val = 1}),
+            "true\n");
+  EXPECT_EQ(runCompare({.type = ValueType::Integer, .val = 1},
+                       {.type = ValueType::Integer, .val = 2}),
+            "false\n");
+}
+
+TEST(startExecution, compareEqualsComparesStrings) {
+  EXPECT_EQ(runCompare({.type = ValueType::String, .val = std::string("a")},
+                       {.type = ValueType::String, .val = std::string("a")}),
+            "true\n");
+  EXPECT_EQ(runCompare({.type = ValueType::String, .val = std::string("a")},
+                       {.type = ValueType::String, .val = std::string("b")}),
+            "false\n");
+}
+
+TEST(startExecution, compareEqualsComparesBools) {
+  EXPECT_EQ(runCompare({.type = ValueType::Bool, .val = true},
+                       {.type = ValueType::Bool, .val = true}),
+            "true\n");
+  EXPECT_EQ(runCompare({.type = ValueType::Bool, .val = true},
+                       {.type = ValueType::Bool, .val = false}),
+            "false\n");
+}
+
+TEST(startExecution, compareEqualsReturnsFalseForDifferentTypes) {
+  EXPECT_EQ(runCompare({.type = ValueType::Integer, .val = 1},
+                       {.type = ValueType::Bool, .val = true}),
+            "false\n");
+
+  auto func = std::shared_ptr<Function>();
+  EXPECT_EQ(runCompare({.type = ValueType::Function, .val = func},
+                       {.type = ValueType::Integer, .val = 1}),
+            "false\n");
+}
+
+TEST(startExecution, compareEqualsThrowsForSameTypeNonPrimitives) {
+  auto func = std::shared_ptr<Function>();
+  auto instrs = getCompareInstrs({.type = ValueType::Function, .val = func},
+                                 {.type = ValueType::Function, .val = func},
+                                 false);
+  Subprogram program(std::make_shared<std::vector<Instruction>>(instrs));
+
+  Executor executor({.threads = 1}, program);
+  DISABLE_COUT
+  EXPECT_THROW(executor.startExecution(), std::runtime_error);
   REENABLE_COUT
 }
 

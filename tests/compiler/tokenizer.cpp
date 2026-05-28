@@ -43,6 +43,25 @@ TEST(Tokenizer, identifiesSingleCharTokenTypesWithWhitespace) {
   delete tokenizer;
 }
 
+TEST(Tokenizer, identifiesEqualsEquals) {
+  std::string text("== =");
+
+  std::istringstream stream(text);
+  Tokenizer *tokenizer = new Tokenizer(stream);
+
+  tokenizer->parse();
+  auto tokens = *(tokenizer->close().get());
+
+  ASSERT_EQ(tokens.size(), 2);
+  EXPECT_EQ(tokens[0].type, TokenType::EqualsEquals);
+  EXPECT_EQ(tokens[0].raw, "==");
+  EXPECT_EQ(tokens[1].type, TokenType::Equals);
+  EXPECT_EQ(tokens[1].raw, "=");
+
+  // Cleanup
+  delete tokenizer;
+}
+
 TEST(Tokenizer, tracksLineNumbers) {
   std::string text(";\n;;\r;");
 

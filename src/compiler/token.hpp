@@ -15,6 +15,7 @@ enum class TokenType {
   Slash,
   Exclamation,
   Equals,
+  EqualsEquals,
   LessThan,
   GreaterThan,
   Comma,

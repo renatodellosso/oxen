@@ -141,6 +141,9 @@ std::optional<std::unique_ptr<Expression>> AstBuilder::parseCompoundExpression(
   case TokenType::Slash:
     type = InstructionType::Divide;
     break;
+  case TokenType::EqualsEquals:
+    type = InstructionType::CompareEquals;
+    break;
   case TokenType::Identifier: {
     // Special case with no middle token
 

@@ -68,7 +68,13 @@ void Tokenizer::parseToken() {
     token.type = TokenType::Slash;
     break;
   case '=':
-    token.type = TokenType::Equals;
+    if (stream.peek() == '=') {
+      stream.get();
+      raw += '=';
+      token.type = TokenType::EqualsEquals;
+    } else {
+      token.type = TokenType::Equals;
+    }
     break;
   case '<':
     token.type = TokenType::LessThan;

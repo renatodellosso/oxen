@@ -5,6 +5,7 @@
 #include "../instruction.hpp"
 #include "subprogram.hpp"
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -22,6 +23,7 @@ class Executor {
 
   // Set to true to end workers
   bool halt;
+  bool failed;
   std::string haltCause;
 
   // Increment depsFulfilled and, if relevant, sets depArgs[i]

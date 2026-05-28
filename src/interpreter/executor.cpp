@@ -290,6 +290,31 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     break;
   }
+  case InstructionType::CompareEquals: {
+    std::shared_ptr<Value> left = instr.depArgs[0], right = instr.depArgs[1];
+
+    if (left->type != right->type) {
+      result = std::make_shared<Value>(ValueType::Bool, false);
+    } else if (left->type == ValueType::Integer) {
+      result = std::make_shared<Value>(ValueType::Bool,
+                                       std::get<int>(left->val) ==
+                                           std::get<int>(right->val));
+    } else if (left->type == ValueType::String) {
+      result = std::make_shared<Value>(ValueType::Bool,
+                                       std::get<std::string>(left->val) ==
+                                           std::get<std::string>(right->val));
+    } else if (left->type == ValueType::Bool) {
+      result = std::make_shared<Value>(ValueType::Bool,
+                                       std::get<bool>(left->val) ==
+                                           std::get<bool>(right->val));
+    } else {
+      throw std::runtime_error(
+          std::format("Invalid arg types on instruction {}: {}, {}", instr.id,
+                      (int)left->type, (int)right->type));
+    }
+
+    break;
+  }
   case InstructionType::If: {
     bool condition = valToBool(*instr.depArgs[0]);
     if (condition)
@@ -454,6 +479,7 @@ void Executor::execWorker(int id) {
       logError(location.c_str(), "[instruction {}] {}", instr.id, err.what());
       haltCause = std::format("Runtime Error in worker {} [instruction {}]: {}",
                               id, instr.id, err.what());
+      failed = true;
       halt = true;
     }
   }
@@ -538,6 +564,9 @@ void Executor::startExecution() {
   if (cliArgs.verbose)
     log(LOCATION, "Done! Executed {} instructions. Halt cause: {}",
         program.size(), haltCause);
+
+  if (failed)
+    throw std::runtime_error(haltCause);
 }
 
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program)
@@ -545,4 +574,4 @@ Executor::Executor(const CliArgs &cliArgs, Subprogram &program)
       stalls(std::vector<bool>(cliArgs.threads)),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
-      halt(false), haltCause("Unknown") {}
+      halt(false), failed(false), haltCause("Unknown") {}
