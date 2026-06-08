@@ -34,7 +34,8 @@ enum class InstructionType {
   Call,
   CompareNotEquals,
   Else,
-  BranchMerge
+  BranchMerge,
+  Return
 };
 
 std::string instructionTypeToString(InstructionType type);

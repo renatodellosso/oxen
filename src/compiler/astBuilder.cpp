@@ -88,6 +88,12 @@ AstBuilder::parseLeadingExpression() {
         RootExpression(InstructionType::GetLiteral, line, next())));
   if (match(TokenType::LeftBrace))
     return parseBlock();
+  if (match(TokenType::Return)) {
+    next(); // Be sure to consume the leading token itself!
+    auto output = parseExpression({TokenType::Semicolon});
+    return std::make_optional(std::make_unique<UnaryExpression>(
+        InstructionType::Return, line, std::move(output.value())));
+  }
   if (match(TokenType::If))
     return parseIf();
   if (match(TokenType::Else))
@@ -106,9 +112,9 @@ AstBuilder::parseLeadingExpression() {
           std::format("Expected condition in while statement!"));
 
     if (!match(TokenType::RightParen))
-      throw std::runtime_error(
-          std::format("Expected ')' after condition in while statement. Got: '{}'",
-                      peek().raw));
+      throw std::runtime_error(std::format(
+          "Expected ')' after condition in while statement. Got: '{}'",
+          peek().raw));
     next(); // Consume ')'
 
     return std::make_optional(std::make_unique<UnaryExpression>(
@@ -342,9 +348,8 @@ AstBuilder::parseStatementBlock(std::string context) {
     return parseBlock();
 
   if (match({TokenType::Else, TokenType::RightBrace, TokenType::Semicolon}))
-    throw std::runtime_error(
-        std::format("Expected body after {} statement. Got: '{}'", context,
-                    peek().raw));
+    throw std::runtime_error(std::format(
+        "Expected body after {} statement. Got: '{}'", context, peek().raw));
 
   auto expr = parseExpression({TokenType::Semicolon});
   if (!expr.has_value())
@@ -370,12 +375,12 @@ std::optional<std::unique_ptr<IfExpression>> AstBuilder::parseIf() {
 
   auto condition = parseExpression({TokenType::RightParen});
   if (!condition.has_value())
-    throw std::runtime_error(std::format("Expected condition in if statement!"));
+    throw std::runtime_error(
+        std::format("Expected condition in if statement!"));
 
   if (!match(TokenType::RightParen))
     throw std::runtime_error(std::format(
-        "Expected ')' after condition in if statement. Got: '{}'",
-        peek().raw));
+        "Expected ')' after condition in if statement. Got: '{}'", peek().raw));
   next(); // Consume ')'
 
   auto thenBlock = parseStatementBlock("if");
@@ -393,9 +398,9 @@ std::optional<std::unique_ptr<IfExpression>> AstBuilder::parseIf() {
     elseBlock = std::move(parsedElse.value());
   }
 
-  return std::make_optional(std::make_unique<IfExpression>(
-      ifLine, std::move(condition.value()), std::move(thenBlock.value()),
-      elseBlock));
+  return std::make_optional(
+      std::make_unique<IfExpression>(ifLine, std::move(condition.value()),
+                                     std::move(thenBlock.value()), elseBlock));
 }
 
 std::optional<std::unique_ptr<Expression>>

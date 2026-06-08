@@ -388,3 +388,23 @@ TEST(Tokenizer, identifiesWhile) {
   // Cleanup
   delete tokenizer;
 }
+
+TEST(Tokenizer, identifiesReturn) {
+  std::string text("int return 2");
+  std::vector<TokenType> expected = {TokenType::Identifier, TokenType::Return,
+                                     TokenType::Literal};
+
+  std::istringstream stream(text);
+  Tokenizer *tokenizer = new Tokenizer(stream);
+
+  tokenizer->parse();
+  auto tokens = *(tokenizer->close().get());
+
+  ASSERT_EQ(tokens.size(), expected.size());
+  for (int i = 0; i < tokens.size(); i++) {
+    EXPECT_EQ(tokens[i].type, expected[i]);
+  }
+
+  // Cleanup
+  delete tokenizer;
+}

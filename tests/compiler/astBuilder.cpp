@@ -810,3 +810,30 @@ TEST(AstBuilder, buildsCallsInLargerExpressions) {
 
   ASSERT_EQ(func->expressions.size(), 1);
 }
+
+TEST(AstBuilder, buildsReturnStatements) {
+  std::vector<Token> tokens = {
+      {TokenType::Return, TokenSubtype::None, "return", 1},
+      {TokenType::Literal, TokenSubtype::Integer, "1", 1},
+      {TokenType::Semicolon, TokenSubtype::None, ";", 1},
+  };
+
+  AstBuilder builder(std::make_unique<std::vector<Token>>(tokens));
+  builder.build();
+
+  EXPECT_EQ(builder.getErrors().get()->size(), 0);
+
+  auto expressions = builder.getExpressions();
+
+  ASSERT_EQ(expressions->size(), 1);
+
+  auto expr = expressions->at(0);
+  ASSERT_EQ(expr->type, InstructionType::Return);
+
+  auto returnExpr = std::static_pointer_cast<UnaryExpression>(expr);
+  ASSERT_NE(returnExpr->root, nullptr);
+  EXPECT_EQ(returnExpr->root->type, InstructionType::GetLiteral);
+
+  auto root = std::static_pointer_cast<RootExpression>(returnExpr->root);
+  EXPECT_EQ(root->token.raw, "1");
+}
