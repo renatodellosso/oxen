@@ -68,9 +68,9 @@ TEST(compile, compilesCompoundExpressions) {
                         (int)InstructionType::Add, (int)InstructionType::Add));
 }
 
-TEST(compile, compilesBlockExpressions) {
+TEST(compile, compilesBlockExpressionsWithoutCalls) {
   auto out = testCompile("{1 + 1;}");
-  EXPECT_EQ(out, std::format("0 2,1 {} 3\n1 3.0 {} 1\n1 3.1 {} 1\n2  {}",
+  EXPECT_EQ(out, std::format("0 2,1 {} 3 0\n1 3.0 {} 1\n1 3.1 {} 1\n2  {}",
                              (int)InstructionType::Block,
                              (int)InstructionType::GetLiteral,
                              (int)InstructionType::GetLiteral,

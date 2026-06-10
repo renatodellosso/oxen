@@ -151,6 +151,8 @@ struct BlockExpression : public Expression {
       : BlockExpression(std::vector<std::shared_ptr<Expression>>(),
                         lineNumber) {}
 
+  std::vector<int> getUnaryCallOffsets() const;
+
   std::string toString() const override;
   std::string toByteCode() const override;
   std::vector<std::reference_wrapper<Expression>>

@@ -153,6 +153,18 @@ int BinaryExpression::countInstructions() const {
   return 1 + left->countInstructions() + right->countInstructions();
 }
 
+std::vector<int> BlockExpression::getUnaryCallOffsets() const {
+  std::vector<int> offsets;
+
+  for (auto expr : expressions) {
+    if (expr->type == InstructionType::Call) {
+      offsets.push_back(expr->id - id);
+    }
+  }
+
+  return offsets;
+}
+
 std::string BlockExpression::toString() const {
   auto str = Expression::toString() + " {\n";
 
@@ -164,10 +176,18 @@ std::string BlockExpression::toString() const {
   return str + "}";
 }
 
+// Outputs in format: "[# of calls] [call offset 1] [call offset 2] [call offset 3]""
 std::string BlockExpression::toByteCode() const {
   // Subtract 1 from count to exclude this instruction
-  std::string str = Expression::toByteCode() + " " +
-                    std::to_string(countInstructions() - 1) + "\n";
+  std::string str =
+      Expression::toByteCode() + " " + std::to_string(countInstructions() - 1);
+
+  auto callOffsets = getUnaryCallOffsets();
+  str += " " + std::to_string(callOffsets.size());
+  for (auto offset : callOffsets)
+    str += " " + std::to_string(offset);
+
+  str += "\n";
 
   // Use references
   for (auto &line : expressions) {
@@ -209,18 +229,18 @@ int BlockExpression::countInstructions() const {
   return count;
 }
 
-IfExpression::IfExpression(int lineNumber, std::shared_ptr<Expression> condition,
+IfExpression::IfExpression(int lineNumber,
+                           std::shared_ptr<Expression> condition,
                            std::shared_ptr<BlockExpression> thenBlock,
                            std::shared_ptr<BlockExpression> elseBlock)
     : UnaryExpression(InstructionType::If, lineNumber, condition),
       thenBlock(std::move(thenBlock)), elseInstruction(nullptr),
       elseBlock(std::move(elseBlock)),
-      mergeInstruction(
-          std::make_shared<Expression>(InstructionType::BranchMerge,
-                                       lineNumber)) {
+      mergeInstruction(std::make_shared<Expression>(
+          InstructionType::BranchMerge, lineNumber)) {
   if (this->elseBlock)
-    elseInstruction = std::make_shared<Expression>(InstructionType::Else,
-                                                   lineNumber);
+    elseInstruction =
+        std::make_shared<Expression>(InstructionType::Else, lineNumber);
 }
 
 std::string IfExpression::toString() const {
@@ -238,8 +258,8 @@ std::string IfExpression::toByteCode() const {
                     "\n" + thenBlock->toByteCode();
 
   if (elseBlock) {
-    str += "\n" + elseInstruction->toByteCode() + "\n" +
-           elseBlock->toByteCode();
+    str +=
+        "\n" + elseInstruction->toByteCode() + "\n" + elseBlock->toByteCode();
   }
 
   str += "\n" + mergeInstruction->toByteCode();

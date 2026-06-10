@@ -1,7 +1,3 @@
-int x = 1;
+void a() {}
 
-if (x == 0)
-    print "zero";
-else print "one";
-
-print "done";
+int x = a();
