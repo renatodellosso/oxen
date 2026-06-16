@@ -1,8 +1,8 @@
 int x = 0;
 
-void a(int y) {
-  x = x + y;
+void a() {
+  x = 1;
 }
 
-a(5);
+a();
 print x;
