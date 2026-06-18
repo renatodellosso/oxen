@@ -157,6 +157,17 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print i;",
      {"3"}},
+     {"WhileLoopsCanBeNested",
+     "int i = 0;\n"
+     "while (i < 3) {\n"
+     "int j = 0;\n"
+     "while (j < 2) {\n"
+     "print i + \" \" + j;\n"
+     "j = j + 1;\n"
+     "}\n"
+     "i = i + 1;\n"
+     "}\n",
+     {"0 0", "0 1", "1 0", "1 1", "2 0", "2 1"}},
 
     // Functions
     {"FunctionsCanBeDeclared", "void main() { print 1; }", {}},
