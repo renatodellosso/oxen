@@ -484,6 +484,8 @@ void AstBuilder::postProcess(
 
       auto &unary = static_cast<UnaryExpression &>(expr);
       if (expr.type == InstructionType::While) {
+        expr.dependentRedirect = block.get();
+
         // Add goto
         int dist = -block->countInstructions() -
                    expr.countInstructions(); // negative so we go back

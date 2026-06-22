@@ -163,6 +163,9 @@ void Executor::updateDependency(InstrDependent dep,
   }
 
   if (fulfilled == dep.instr->depCount) {
+    if (cliArgs.verbose)
+      log(LOCATION, "\tPushing instruction {} onto queue",
+          dep.instr->toString());
     queue.push(*dep.instr);
   }
 }
@@ -407,6 +410,11 @@ void Executor::execSingleInstruction(Instruction &instr) {
   case InstructionType::CompareLessThanEquals:
   case InstructionType::CompareGreaterThan:
   case InstructionType::CompareGreaterThanEquals: {
+    if (instr.depArgs.size() < 2)
+      throw std::runtime_error(
+          std::format("Instruction {} requires 2 args, but only has {}!",
+                      instr.id, instr.depArgs.size()));
+
     std::shared_ptr<Value> left = instr.depArgs[0], right = instr.depArgs[1];
 
     if (left->type != right->type)
@@ -493,17 +501,33 @@ void Executor::execSingleInstruction(Instruction &instr) {
     int returnTo = instr.id + dist;
 
     for (int i = returnTo; i <= instr.id; i++) {
-      instr.program->at(i).depArgs.clear();
+      // Remember to use lock when clearing depArgs, since other threads may be
+      // reading them!
+      {
+        std::lock_guard<std::mutex> argLock(depArgsMutexes[instr.id]);
+        instr.program->at(i).depArgs.clear();
+      }
+
       for (auto dep : instr.program->at(i).dependents) {
-        if (dep.instr->id > returnTo && dep.instr->id <= instr.id)
-          dep.instr->depsFulfilled--;
+        if (dep.instr->id > returnTo && dep.instr->id <= instr.id) {
+          std::lock_guard<std::mutex> fulfilledLock(
+              depsFulfilledMutexes[dep.instr->id]);
+          dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
+        }
       }
     }
 
     for (int i = returnTo; i <= instr.id; i++) {
       auto &loopInstr = instr.program->at(i);
-      if (loopInstr.depsFulfilled == loopInstr.depCount)
+
+      std::lock_guard<std::mutex> fulfilledLock(
+          depsFulfilledMutexes[loopInstr.id]);
+      if (loopInstr.depsFulfilled == loopInstr.depCount) {
+        if (cliArgs.verbose) {
+          log(LOCATION, "Looping back to instruction {}", loopInstr.toString());
+        }
         queue.push(loopInstr);
+      }
     }
 
     break;

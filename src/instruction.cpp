@@ -99,9 +99,16 @@ std::string Instruction::toString() {
   str += "], dependents: [";
 
   for (auto dep : dependents) {
+    if (dep.disabled)
+      str += "-";
+    
     str += std::to_string(dep.instr->id);
     if (dep.argIndex.has_value())
       str += "." + std::to_string(dep.argIndex.value());
+
+    if (dep.disabled)
+      str += "-";
+
     str += ", ";
   }
   if (dependents.size() > 0)
