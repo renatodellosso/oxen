@@ -168,6 +168,22 @@ std::vector<E2eTest> tests = {
      "i = i + 1;\n"
      "}\n",
      {"j: 0", "j: 1", "j: 0", "j: 1", "j: 0", "j: 1"}},
+    {"WhileLoopsCanBeDoublyNestedWhenTheyDontUseExternalVars",
+     "int i = 0;\n"
+     "while (i < 3) {\n"
+     "int j = 0;\n"
+     "while (j < 2) {\n"
+     "int k = 0;\n"
+     "while (k < 2) {\n"
+     "print \"k: \" + k;\n"
+     "k = k + 1;\n"
+     "}\n"
+     "j = j + 1;\n"
+     "}\n"
+     "i = i + 1;\n"
+     "}\n",
+     {"k: 0", "k: 1", "k: 0", "k: 1", "k: 0", "k: 1", "k: 0", "k: 1", "k: 0",
+      "k: 1", "k: 0", "k: 1"}},
     {"WhileLoopsCanBeNestedWhenTheyUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"
@@ -179,6 +195,22 @@ std::vector<E2eTest> tests = {
      "i = i + 1;\n"
      "}\n",
      {"0 0", "0 1", "1 0", "1 1", "2 0", "2 1"}},
+    {"WhileLoopsCanBeDoublyNestedWhenTheyUseExternalVars",
+     "int i = 0;\n"
+     "while (i < 3) {\n"
+     "int j = 0;\n"
+     "while (j < 2) {\n"
+     "int k = 0;\n"
+     "while (k < 2) {\n"
+     "print i + \" \" + j + \" \" + k;\n"
+     "k = k + 1;\n"
+     "}\n"
+     "j = j + 1;\n"
+     "}\n"
+     "i = i + 1;\n"
+     "}\n",
+     {"0 0 0", "0 0 1", "0 1 0", "0 1 1", "1 0 0", "1 0 1", "1 1 0", "1 1 1",
+      "2 0 0", "2 0 1", "2 1 0", "2 1 1"}},
 
     // Functions
     {"FunctionsCanBeDeclared", "void main() { print 1; }", {}},
