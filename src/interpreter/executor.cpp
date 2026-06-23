@@ -125,11 +125,15 @@ invalidArgTypesError(Instruction &instr, ValueType left, ValueType right) {
 
 void Executor::updateDependency(InstrDependent dep,
                                 std::shared_ptr<Value> result) {
-  if (dep.disabled)
+  if (dep.disabled || dep.instr->skipped)
     return;
 
   if (dep.returnLatch && dep.returnLatch->exchange(true))
     return;
+
+  if (cliArgs.verbose)
+    log(LOCATION, "\tUpdating dependency for {} with result {}",
+        dep.instr->toString(), result ? valToStr(*result) : "none");
 
   // Don't re-set dep args
   if (dep.argIndex.has_value() &&
@@ -170,22 +174,22 @@ void Executor::updateDependency(InstrDependent dep,
   }
 }
 
-void Executor::skipInstruction(Instruction &instr) {
+void Executor::skipInstruction(Instruction &instr, bool markSkippedAs) {
   if (cliArgs.verbose)
     log(LOCATION, "Skipping instruction: {}", instr.toString());
 
-  instr.depCount = -1;
+  instr.skipped = markSkippedAs;
 
   int skipUntil = -1;
   if (instr.type == InstructionType::Block) {
     int toSkip = std::get<int>(instr.bytecodeArgs[0].val);
     skipUntil = instr.id + toSkip;
 
-    // Set everything's depCount to -1, then skip everything
+    // Set everything's skipped flag then skip everything
     for (int i = 1; i <= toSkip; i++) {
       // auto& not auto - don't forget the &!
       auto &skipped = instr.program->at(instr.id + i);
-      skipped.depCount = -1;
+      skipped.skipped = markSkippedAs;
 
       // Skipping the block skips its body, so don't skip again
       if (skipped.type == InstructionType::Block) {
@@ -197,7 +201,7 @@ void Executor::skipInstruction(Instruction &instr) {
     for (int i = 1; i <= toSkip; i++) {
       // auto& not auto - don't forget the &!
       auto &skipped = instr.program->at(instr.id + i);
-      skipInstruction(skipped);
+      skipInstruction(skipped, markSkippedAs);
 
       // Skipping the block skips its body, so don't skip again
       if (skipped.type == InstructionType::Block) {
@@ -206,6 +210,9 @@ void Executor::skipInstruction(Instruction &instr) {
       }
     }
   }
+
+  if (!markSkippedAs)
+    return;
 
   // Skip all deps first, then update so we don't accidently push onto queue
   for (auto dep : instr.dependents) {
@@ -484,6 +491,9 @@ void Executor::execSingleInstruction(Instruction &instr) {
         if (dep.instr->id == instr.id + 1)
           updateDependency(dep, result);
       }
+
+      // Unskip block
+      skipInstruction(instr.program->at(instr.id + 1), false);
       break;
     }
 
@@ -509,7 +519,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
       }
 
       for (auto dep : instr.program->at(i).dependents) {
-        if (dep.instr->id > returnTo && dep.instr->id <= instr.id) {
+        if (dep.instr->program == instr.program && dep.instr->id > returnTo &&
+            dep.instr->id <= instr.id) {
           std::lock_guard<std::mutex> fulfilledLock(
               depsFulfilledMutexes[dep.instr->id]);
           dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);

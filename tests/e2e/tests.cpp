@@ -157,7 +157,18 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print i;",
      {"3"}},
-     {"WhileLoopsCanBeNested",
+    {"WhileLoopsCanBeNestedWhenTheyDontUseExternalVars",
+     "int i = 0;\n"
+     "while (i < 3) {\n"
+     "int j = 0;\n"
+     "while (j < 2) {\n"
+     "print \"j: \" + j;\n"
+     "j = j + 1;\n"
+     "}\n"
+     "i = i + 1;\n"
+     "}\n",
+     {"j: 0", "j: 1", "j: 0", "j: 1", "j: 0", "j: 1"}},
+    {"WhileLoopsCanBeNestedWhenTheyUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"
      "int j = 0;\n"
@@ -322,7 +333,8 @@ std::vector<E2eTest> tests = {
      "if (a == 1) return 2;\n"
      "}\n"
      "print main(0);\n"
-     "print main(1);\n", {"1", "2"}},
+     "print main(1);\n",
+     {"1", "2"}},
     {"ReturnsUseFirstExecutedReturnStatement",
      "int main() {\n"
      "return 1;\n"

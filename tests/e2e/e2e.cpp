@@ -102,7 +102,7 @@ TEST_P(E2EFixture, E2E) {
   auto splitOut = split(output, '\n');
 
   EXPECT_TRUE(EqualSize(splitOut, test.output));
-  // EXPECT_EQ(splitOut.size(), test.output.size());
+  
   for (auto line : test.output) {
     EXPECT_TRUE(Contains(splitOut, line));
   }

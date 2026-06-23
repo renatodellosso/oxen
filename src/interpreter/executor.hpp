@@ -38,7 +38,7 @@ class Executor {
   // Increment depsFulfilled and, if relevant, sets depArgs[i]
   void updateDependency(InstrDependent dep, std::shared_ptr<Value> result);
   // Use recurse = true at the root level for skipping blocks
-  void skipInstruction(Instruction &instr);
+  void skipInstruction(Instruction &instr, bool markSkippedAs = true);
   void execSingleInstruction(Instruction &instr);
 
   // Multithreaded worker that actually executes instructions

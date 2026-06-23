@@ -65,6 +65,7 @@ struct Instruction {
   // Args from previous instructions
   std::vector<std::shared_ptr<Value>> depArgs;
 
+  bool skipped = false;
   int depCount, depsFulfilled;
   std::vector<InstrDependent> dependents;
 
