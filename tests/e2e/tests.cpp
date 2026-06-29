@@ -233,6 +233,13 @@ std::vector<E2eTest> tests = {
      "void extra() { print 2; }\n"
      "}",
      {}},
+    {"FunctionsCanBeDeclaredInsideMultipleFunctions",
+     "void main() { \n"
+     "void extra() { \n"
+     "void extra2() { print 2; }\n"
+     " }\n"
+     "}",
+     {}},
     {"FunctionsCanShadowVariablesWithParameters",
      "int a;\n"
      "void main(int a) { \n"
@@ -339,6 +346,40 @@ std::vector<E2eTest> tests = {
      "}\n"
      "outer(5);\n",
      {"-1", "1", "4", "6"}},
+    {"CallsCanCallFunctionsInsideFunctions",
+     "void main() { \n"
+     "void extra() { print 2; }\n"
+     "extra();\n"
+     "}\n"
+     "main();",
+     {"2"}},
+    {"CallsCanCallFunctionsInsideFunctionsWithArguments",
+     "void main(int a) { \n"
+     "void extra(int b) { print a + b; }\n"
+     "extra(2);\n"
+     "}\n"
+     "main(3);",
+     {"5"}},
+    {"CallsCanCallFunctionsInsideMultipleFunctions",
+     "void main() { \n"
+     "void extra() { \n"
+     "void extra2() { print 2; }\n"
+     "extra2();\n"
+     "}\n"
+     "extra();\n"
+     "}\n"
+     "main();",
+     {"2"}},
+    {"CallsCanCallFunctionsInsideMultipleFunctionsWithArguments",
+     "void main(int a) { \n"
+     "void extra(int b) { \n"
+     "void extra2(int c) { print a + b + c; }\n"
+     "extra2(3);\n"
+     "}\n"
+     "extra(2);\n"
+     "}\n"
+     "main(1);",
+     {"6"}},
 
     {"ReturnsWork", "int main() { return 1; }\nprint main();", {"1"}},
     {"ReturnsWorkWithMultipleCalls",
