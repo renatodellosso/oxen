@@ -1,4 +1,153 @@
-// (0)GetLiteral("hello world")
-0 1.0 1 "hello world"
-// (1)Print((0)GetLiteral("hello world"))
-1  19
+// (0)GetIdentifier(int)
+0 2.0 3 int
+// (1)GetLiteral(i)
+0 2.1 1 i
+// (2)Declare((0)GetIdentifier(int), (1)GetLiteral(i))
+2 4.0,4 4
+// (3)GetLiteral(0)
+0 4.1 1 0
+// (4)Set((2)Declare((0)GetIdentifier(int), (1)GetLiteral(i)), (3)GetLiteral(0))
+3 54,51,50,5 5
+// (5)GetIdentifier(i)
+1 54,7.0 3 i
+// (6)GetLiteral(2)
+0 7.1 1 2
+// (7)CompareLessThan((5)GetIdentifier(i), (6)GetLiteral(2))
+2 8.0 12
+// (8)While((7)CompareLessThan((5)GetIdentifier(i), (6)GetLiteral(2)))
+1 9 17
+// (9)Block {
+// 	(14)Set((12)Declare((10)GetIdentifier(int), (11)GetLiteral(j)), (13)GetLiteral(0))
+// 	(18)While((17)CompareLessThan((15)GetIdentifier(j), (16)GetLiteral(3)))
+// 	(19)Block {
+// 	(24)Set((22)Declare((20)GetIdentifier(int), (21)GetLiteral(k)), (23)GetLiteral(0))
+// 	(28)While((27)CompareLessThan((25)GetIdentifier(k), (26)GetLiteral(3)))
+// 	(29)Block {
+// 	(34)Set((30)ReferenceIdentifier(k), (33)Add((31)GetIdentifier(k), (32)GetLiteral(1)))
+// 	(38)Print((37)Add((35)GetLiteral("    k = "), (36)GetIdentifier(k)))
+// 	(39)GoTo(-14)
+// }
+// 	(44)Set((40)ReferenceIdentifier(j), (43)Add((41)GetIdentifier(j), (42)GetLiteral(1)))
+// 	(48)Print((47)Add((45)GetLiteral("  j = "), (46)GetIdentifier(j)))
+// 	(49)GoTo(-34)
+// }
+// 	(54)Set((50)ReferenceIdentifier(i), (53)Add((51)GetIdentifier(i), (52)GetLiteral(1)))
+// 	(58)Print((57)Add((55)GetLiteral("i = "), (56)GetIdentifier(i)))
+// 	(59)GoTo(-54)
+// }
+1 59,55,51,50,46,45,42,41,40,36,19,16,29,11,26,56,39,15,49,13,52,10 0 50 0
+// (10)GetIdentifier(int)
+1 59,12.0 3 int
+// (11)GetLiteral(j)
+1 59,12.1 1 j
+// (12)Declare((10)GetIdentifier(int), (11)GetLiteral(j))
+2 59,14.0,14 4
+// (13)GetLiteral(0)
+1 59,14.1 1 0
+// (14)Set((12)Declare((10)GetIdentifier(int), (11)GetLiteral(j)), (13)GetLiteral(0))
+3 59,44,41,40,15 5
+// (15)GetIdentifier(j)
+2 44,17.0 3 j
+// (16)GetLiteral(3)
+1 17.1 1 3
+// (17)CompareLessThan((15)GetIdentifier(j), (16)GetLiteral(3))
+2 18.0 12
+// (18)While((17)CompareLessThan((15)GetIdentifier(j), (16)GetLiteral(3)))
+1 59,19 17
+// (19)Block {
+// 	(24)Set((22)Declare((20)GetIdentifier(int), (21)GetLiteral(k)), (23)GetLiteral(0))
+// 	(28)While((27)CompareLessThan((25)GetIdentifier(k), (26)GetLiteral(3)))
+// 	(29)Block {
+// 	(34)Set((30)ReferenceIdentifier(k), (33)Add((31)GetIdentifier(k), (32)GetLiteral(1)))
+// 	(38)Print((37)Add((35)GetLiteral("    k = "), (36)GetIdentifier(k)))
+// 	(39)GoTo(-14)
+// }
+// 	(44)Set((40)ReferenceIdentifier(j), (43)Add((41)GetIdentifier(j), (42)GetLiteral(1)))
+// 	(48)Print((47)Add((45)GetLiteral("  j = "), (46)GetIdentifier(j)))
+// 	(49)GoTo(-34)
+// }
+2 46,45,42,21,41,40,36,29,26,39,25,23,49,20 0 30 0
+// (20)GetIdentifier(int)
+1 49,22.0 3 int
+// (21)GetLiteral(k)
+1 49,22.1 1 k
+// (22)Declare((20)GetIdentifier(int), (21)GetLiteral(k))
+2 49,24.0,24 4
+// (23)GetLiteral(0)
+1 49,24.1 1 0
+// (24)Set((22)Declare((20)GetIdentifier(int), (21)GetLiteral(k)), (23)GetLiteral(0))
+3 34,31,30,49,25 5
+// (25)GetIdentifier(k)
+2 34,27.0 3 k
+// (26)GetLiteral(3)
+2 27.1 1 3
+// (27)CompareLessThan((25)GetIdentifier(k), (26)GetLiteral(3))
+2 28.0 12
+// (28)While((27)CompareLessThan((25)GetIdentifier(k), (26)GetLiteral(3)))
+1 49,29 17
+// (29)Block {
+// 	(34)Set((30)ReferenceIdentifier(k), (33)Add((31)GetIdentifier(k), (32)GetLiteral(1)))
+// 	(38)Print((37)Add((35)GetLiteral("    k = "), (36)GetIdentifier(k)))
+// 	(39)GoTo(-14)
+// }
+3 39,36,35,32,31,30 0 10 0
+// (30)ReferenceIdentifier(k)
+2 39,34.0 2 k
+// (31)GetIdentifier(k)
+2 39,34,33.0 3 k
+// (32)GetLiteral(1)
+1 39,33.1 1 1
+// (33)Add((31)GetIdentifier(k), (32)GetLiteral(1))
+2 39,34.1 6
+// (34)Set((30)ReferenceIdentifier(k), (33)Add((31)GetIdentifier(k), (32)GetLiteral(1)))
+5 39,36 5
+// (35)GetLiteral("    k = ")
+1 39,37.0 1 "    k = "
+// (36)GetIdentifier(k)
+4 39,37.1 3 k
+// (37)Add((35)GetLiteral("    k = "), (36)GetIdentifier(k))
+2 39,38.0 6
+// (38)Print((37)Add((35)GetLiteral("    k = "), (36)GetIdentifier(k)))
+1 39 19
+// (39)GoTo(-14)
+12  18 -14
+// (40)ReferenceIdentifier(j)
+3 49,44.0 2 j
+// (41)GetIdentifier(j)
+3 49,44,43.0 3 j
+// (42)GetLiteral(1)
+2 49,43.1 1 1
+// (43)Add((41)GetIdentifier(j), (42)GetLiteral(1))
+2 49,44.1 6
+// (44)Set((40)ReferenceIdentifier(j), (43)Add((41)GetIdentifier(j), (42)GetLiteral(1)))
+5 49,46 5
+// (45)GetLiteral("  j = ")
+2 49,47.0 1 "  j = "
+// (46)GetIdentifier(j)
+3 49,47.1 3 j
+// (47)Add((45)GetLiteral("  j = "), (46)GetIdentifier(j))
+2 49,48.0 6
+// (48)Print((47)Add((45)GetLiteral("  j = "), (46)GetIdentifier(j)))
+1 49 19
+// (49)GoTo(-34)
+17  18 -34
+// (50)ReferenceIdentifier(i)
+2 59,54.0 2 i
+// (51)GetIdentifier(i)
+2 59,54,53.0 3 i
+// (52)GetLiteral(1)
+1 59,53.1 1 1
+// (53)Add((51)GetIdentifier(i), (52)GetLiteral(1))
+2 59,54.1 6
+// (54)Set((50)ReferenceIdentifier(i), (53)Add((51)GetIdentifier(i), (52)GetLiteral(1)))
+5 59,56 5
+// (55)GetLiteral("i = ")
+1 59,57.0 1 "i = "
+// (56)GetIdentifier(i)
+2 59,57.1 3 i
+// (57)Add((55)GetLiteral("i = "), (56)GetIdentifier(i))
+2 59,58.0 6
+// (58)Print((57)Add((55)GetLiteral("i = "), (56)GetIdentifier(i)))
+1 59 19
+// (59)GoTo(-54)
+16  18 -54

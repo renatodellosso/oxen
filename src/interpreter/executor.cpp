@@ -131,15 +131,15 @@ void Executor::updateDependency(InstrDependent dep,
   if (dep.returnLatch && dep.returnLatch->exchange(true))
     return;
 
-  if (cliArgs.verbose)
-    log(LOCATION, "\tUpdating dependency for {} with result {}",
-        dep.instr->toString(), result ? valToStr(*result) : "none");
-
   // Don't re-set dep args
   if (dep.argIndex.has_value() &&
       dep.instr->depArgs.size() > dep.argIndex.value() &&
-      dep.instr->depArgs[dep.argIndex.value()].get() != nullptr)
+      dep.instr->depArgs[dep.argIndex.value()].get() != nullptr) {
+    if (cliArgs.verbose)
+      log(LOCATION, "\tDependency for {} already set, skipping",
+          dep.instr->toString());
     return;
+  }
 
   if (dep.argIndex.has_value()) {
     std::lock_guard<std::mutex> argLock(depArgsMutexes[dep.instr->id]);
@@ -172,11 +172,16 @@ void Executor::updateDependency(InstrDependent dep,
           dep.instr->toString());
     queue.push(*dep.instr);
   }
+
+  if (cliArgs.verbose)
+    log(LOCATION, "\tUpdated dependency for {} with result {}",
+        dep.instr->toString(), result ? valToStr(*result) : "none");
 }
 
 void Executor::skipInstruction(Instruction &instr, bool markSkippedAs) {
   if (cliArgs.verbose)
-    log(LOCATION, "Skipping instruction: {}", instr.toString());
+    log(LOCATION, "{} instruction: {}",
+        markSkippedAs ? "Skipping" : "Unskipping", instr.toString());
 
   instr.skipped = markSkippedAs;
 
@@ -520,7 +525,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
       for (auto dep : instr.program->at(i).dependents) {
         if (dep.instr->program == instr.program && dep.instr->id > returnTo &&
-            dep.instr->id <= instr.id) {
+            dep.instr->id <= instr.id && !dep.disabled) {
           std::lock_guard<std::mutex> fulfilledLock(
               depsFulfilledMutexes[dep.instr->id]);
           dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
