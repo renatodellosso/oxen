@@ -48,6 +48,8 @@ struct Expression {
   int lineNumber;
   int id;
 
+  bool postprocessed;
+
   std::vector<std::reference_wrapper<Expression>> dependencies;
   std::unordered_set<ExprDependent> dependents;
   Expression *dependentRedirect;

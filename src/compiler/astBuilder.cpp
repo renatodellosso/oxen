@@ -6,6 +6,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 TokenFilter::TokenFilter(TokenType type, std::optional<TokenSubtype> subtype)
@@ -443,10 +444,62 @@ AstBuilder::parseExpression(std::initializer_list<TokenFilter> endOn) {
   }
 }
 
+// Convert "while, body, goto" into "function, while, call, goto"
+void AstBuilder::postProcessWhileLoop(
+    std::vector<std::shared_ptr<Expression>> *expressions, int i,
+    std::shared_ptr<Expression> loop) {
+  auto body = std::static_pointer_cast<BlockExpression>(expressions->at(i + 1));
+
+  // Add goto
+  int dist = -body->countInstructions() -
+             loop->countInstructions(); // negative so we go back
+  Token token = {TokenType::Literal, TokenSubtype::Integer,
+                 std::to_string(dist), loop->lineNumber};
+
+  auto jump = std::make_shared<RootExpression>(
+      RootExpression(InstructionType::GoTo, loop->lineNumber, token));
+  jump->dependentRedirect = loop.get();
+
+  auto origLoop = std::make_shared<UnaryExpression>(
+      *static_cast<UnaryExpression *>(loop.get()));
+
+  // Make function
+  auto func =
+      std::make_unique<FunctionExpression>("_body", "void", loop->lineNumber);
+
+  // Make call
+  auto funcName = std::make_unique<RootExpression>(
+      InstructionType::GetIdentifier, loop->lineNumber,
+      Token(TokenType::Identifier, TokenSubtype::None, "_body",
+            loop->lineNumber));
+  auto call =
+      std::make_unique<CallExpression>(std::move(funcName), loop->lineNumber);
+
+  auto innerBlock = std::make_unique<BlockExpression>(
+      std::vector<std::shared_ptr<Expression>>{std::move(call), jump},
+      loop->lineNumber);
+
+  // Make outer block
+  auto block = std::make_unique<BlockExpression>(loop->lineNumber);
+  block->expressions.push_back(std::move(func));
+  block->expressions.push_back(std::make_shared<UnaryExpression>(
+      *static_cast<UnaryExpression *>(loop.get())));
+  block->expressions.push_back(std::move(innerBlock));
+
+  *loop = *block.release();
+
+  postProcess(&block->expressions);
+}
+
 void AstBuilder::postProcess(
     std::vector<std::shared_ptr<Expression>> *expressions) {
   for (int i = 0; i < expressions->size(); i++) {
     auto &expr = *expressions->at(i).get();
+
+    if (expr.postprocessed)
+      continue;
+
+    expr.postprocessed = true;
 
     auto ifExpr = dynamic_cast<IfExpression *>(&expr);
     if (ifExpr) {
@@ -482,18 +535,10 @@ void AstBuilder::postProcess(
 
       postProcess(&block->expressions);
 
-      auto &unary = static_cast<UnaryExpression &>(expr);
       if (expr.type == InstructionType::While) {
-        // Add goto
-        int dist = -block->countInstructions() -
-                   expr.countInstructions(); // negative so we go back
-        Token token = {TokenType::Literal, TokenSubtype::Integer,
-                       std::to_string(dist), expr.lineNumber};
+        postProcessWhileLoop(expressions, i, expressions->at(i));
 
-        auto jump = std::make_shared<RootExpression>(
-            RootExpression(InstructionType::GoTo, expr.lineNumber, token));
-        jump->dependentRedirect = &expr;
-        block->expressions.push_back(jump);
+        i--; // Reprocess the new expression
       }
     }
 

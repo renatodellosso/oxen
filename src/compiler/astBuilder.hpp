@@ -40,7 +40,8 @@ private:
    */
   bool match(std::initializer_list<TokenFilter> filters);
   bool match(TokenFilter filter);
-  bool match(TokenType type, std::optional<TokenSubtype> subtype = std::nullopt);
+  bool match(TokenType type,
+             std::optional<TokenSubtype> subtype = std::nullopt);
 
   // Building methods
 
@@ -64,6 +65,9 @@ private:
   std::optional<std::unique_ptr<Expression>>
   parseExpression(std::initializer_list<TokenFilter> endOn);
 
+  void
+  postProcessWhileLoop(std::vector<std::shared_ptr<Expression>> *expressions,
+                       int i, std::shared_ptr<Expression> loop);
   void postProcess(std::vector<std::shared_ptr<Expression>> *expressions);
 
   void syntaxError(std::string msg);
