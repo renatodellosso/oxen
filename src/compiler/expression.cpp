@@ -33,15 +33,16 @@ ExprDependent::ExprDependent(Expression &expr, int argIndex)
 ExprDependent::ExprDependent(Expression &expr)
     : ExprDependent(expr, std::nullopt) {}
 
-std::string ExprDependent::toString() {
+std::string ExprDependent::toString(int indent) {
   std::string str = std::to_string(expr.get().id);
   if (argIndex.has_value())
     str += "." + std::to_string(argIndex.value());
   return str;
 }
 
-std::string Expression::toString() const {
-  return std::format("({}, {}){}", id, static_cast<const void *>(this),
+std::string Expression::toString(int indent) const {
+  return std::format("{}({}, {}){}", std::string(indent, '\t'), id,
+                     static_cast<const void *>(this),
                      instructionTypeToString(type));
 }
 
@@ -87,16 +88,16 @@ int Expression::numberExpressions(int startWith) {
 
 int Expression::countInstructions() const { return 1; }
 
-std::string RootExpression::toString() const {
-  return Expression::toString() + "(" + token.raw + ")";
+std::string RootExpression::toString(int indent) const {
+  return Expression::toString(indent) + "(" + token.raw + ")";
 }
 
 std::string RootExpression::toByteCode(CliArgs args) const {
   return Expression::toByteCode(args) + " " + token.raw;
 }
 
-std::string UnaryExpression::toString() const {
-  return Expression::toString() + "(" + root.get()->toString() + ")";
+std::string UnaryExpression::toString(int indent) const {
+  return Expression::toString(indent) + "(" + root.get()->toString() + ")";
 }
 
 std::string UnaryExpression::toByteCode(CliArgs args) const {
@@ -125,8 +126,8 @@ int UnaryExpression::countInstructions() const {
   return 1 + root->countInstructions();
 }
 
-std::string BinaryExpression::toString() const {
-  return Expression::toString() + "(" + left.get()->toString() + ", " +
+std::string BinaryExpression::toString(int indent) const {
+  return Expression::toString(indent) + "(" + left.get()->toString() + ", " +
          right.get()->toString() + ")";
 }
 
@@ -177,15 +178,15 @@ std::vector<int> BlockExpression::getUnaryCallOffsets() const {
   return offsets;
 }
 
-std::string BlockExpression::toString() const {
-  auto str = Expression::toString() + " {\n";
+std::string BlockExpression::toString(int indent) const {
+  auto str = Expression::toString(indent) + " {\n";
 
   // Use references
   for (auto &line : expressions) {
-    str += "\t" + line.get()->toString() + "\n";
+    str += line.get()->toString(indent + 1) + "\n";
   }
 
-  return str + "}";
+  return str + std::string(expressions.size() > 0 ? indent : 0, '\t') + "}";
 }
 
 // Outputs in format: "[# of calls] [call offset 1] [call offset 2] [call offset
@@ -255,12 +256,12 @@ IfExpression::IfExpression(int lineNumber,
         std::make_shared<Expression>(InstructionType::Else, lineNumber);
 }
 
-std::string IfExpression::toString() const {
-  auto str = Expression::toString() + "(" + root->toString() + ") {\n";
-  str += "\t" + thenBlock->toString() + "\n";
+std::string IfExpression::toString(int indent) const {
+  auto str = Expression::toString(indent) + "(" + root->toString() + ") {\n";
+  str += "\t" + thenBlock->toString(indent) + "\n";
 
   if (elseBlock)
-    str += "} else {\n\t" + elseBlock->toString() + "\n";
+    str += "} else {\n\t" + elseBlock->toString(indent) + "\n";
 
   return str + "}";
 }
@@ -348,8 +349,8 @@ int IfExpression::countInstructions() const {
   return count + 1;
 }
 
-std::string FunctionExpression::toString() const {
-  auto str = Expression::toString() + " " + returnType + " " + name + "(";
+std::string FunctionExpression::toString(int indent) const {
+  auto str = Expression::toString(indent) + " " + returnType + " " + name + "(";
 
   str += "linking ";
   if (!finishedLinking)

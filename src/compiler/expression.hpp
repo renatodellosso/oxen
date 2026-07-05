@@ -22,7 +22,7 @@ struct ExprDependent {
   ExprDependent(Expression &expr, std::optional<int> argIndex);
   ExprDependent(Expression &expr, int argIndex);
   ExprDependent(Expression &expr);
-  std::string toString();
+  std::string toString(int indent = 0);
 };
 
 // Custom hasher and equality
@@ -60,7 +60,7 @@ struct Expression {
         dependents(std::unordered_set<ExprDependent>()),
         dependentRedirect(nullptr) {}
 
-  virtual std::string toString() const;
+  virtual std::string toString(int indent = 0) const;
   virtual std::string toByteCode(CliArgs args) const;
   // Returns this expression and all its subexpressions, in the order they will
   // be executed
@@ -83,7 +83,7 @@ struct RootExpression : public Expression {
   RootExpression(InstructionType type, int lineNumber, Token token)
       : Expression(type, lineNumber), token(token) {}
 
-  std::string toString() const override;
+  std::string toString(int indent = 0) const override;
   std::string toByteCode(CliArgs args) const override;
 };
 
@@ -94,7 +94,7 @@ struct UnaryExpression : public Expression {
                   std::shared_ptr<Expression> root)
       : Expression(type, lineNumber), root(std::move(root)) {}
 
-  std::string toString() const override;
+  std::string toString(int indent = 0) const override;
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
@@ -113,7 +113,7 @@ struct IfExpression : public UnaryExpression {
                std::shared_ptr<BlockExpression> thenBlock,
                std::shared_ptr<BlockExpression> elseBlock = nullptr);
 
-  std::string toString() const override;
+  std::string toString(int indent = 0) const override;
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
@@ -130,7 +130,7 @@ struct BinaryExpression : public Expression {
                    std::shared_ptr<Expression> right)
       : Expression(type, lineNumber), left(left), right(right) {}
 
-  std::string toString() const override;
+  std::string toString(int indent = 0) const override;
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
@@ -156,7 +156,7 @@ struct BlockExpression : public Expression {
 
   std::vector<int> getUnaryCallOffsets() const;
 
-  std::string toString() const override;
+  std::string toString(int indent = 0) const override;
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
@@ -210,7 +210,7 @@ struct FunctionExpression : public Expression {
   FunctionExpression(int lineNumber)
       : FunctionExpression("unnamed_func", "void", lineNumber) {}
 
-  std::string toString() const override;
+  std::string toString(int indent = 0) const override;
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
