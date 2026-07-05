@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <format>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -40,7 +41,8 @@ std::string ExprDependent::toString() {
 }
 
 std::string Expression::toString() const {
-  return std::format("({}){}", id, instructionTypeToString(type));
+  return std::format("({}, {}){}", id, static_cast<const void *>(this),
+                     instructionTypeToString(type));
 }
 
 std::string Expression::toByteCode(CliArgs args) const {
@@ -79,6 +81,7 @@ void Expression::linkInternally() { return; }
 
 int Expression::numberExpressions(int startWith) {
   this->id = startWith;
+
   return startWith + 1;
 }
 
@@ -222,8 +225,7 @@ BlockExpression::getWithSubExpressions() const {
 }
 
 int BlockExpression::numberExpressions(int startWith) {
-  id = startWith;
-  startWith++;
+  startWith = Expression::numberExpressions(startWith);
 
   for (auto &line : expressions) {
     startWith = line.get()->numberExpressions(startWith);
@@ -401,8 +403,7 @@ FunctionExpression::getWithSubExpressions() const {
 void FunctionExpression::linkInternally() { addDependency(*body.get(), *this); }
 
 int FunctionExpression::numberExpressions(int startWith) {
-  id = startWith;
-  startWith++;
+  startWith = Expression::numberExpressions(startWith);
 
   return body->numberExpressions(startWith);
 }

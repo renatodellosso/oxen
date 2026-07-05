@@ -492,6 +492,9 @@ void AstBuilder::postProcessWhileLoop(
   // Replace the expression at loop with block
   (*expressions)[i] = std::move(block);
 
+  // Remove body since it's now part of the function
+  expressions->erase(expressions->begin() + i + 1);
+
   // Can't use block anymore
   postProcess(&std::static_pointer_cast<BlockExpression>(expressions->at(i))
                    ->expressions);

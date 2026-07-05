@@ -1,73 +1,70 @@
-// (0)GetIdentifier(int)
+// (0, 0x1013247d0)GetIdentifier(int)
 0 2.0 3 int
-// (1)GetLiteral(a)
+// (1, 0x101324888)GetLiteral(a)
 0 2.1 1 a
-// (2)Declare((0)GetIdentifier(int), (1)GetLiteral(a))
+// (2, 0x101324910)Declare((0, 0x1013247d0)GetIdentifier(int), (1, 0x101324888)GetLiteral(a))
 2 4.0,4 4
-// (3)GetLiteral(0)
+// (3, 0x101324990)GetLiteral(0)
 0 4.1 1 0
-// (4)Set((2)Declare((0)GetIdentifier(int), (1)GetLiteral(a)), (3)GetLiteral(0))
-3 15 5
-// (5)Block {
-// 	(6)Function void _body(linking finished) {
-// 	(7)Block {
-// 	(11)While((10)CompareLessThan((8)GetIdentifier(a), (9)GetLiteral(10)))
+// (4, 0x101324a50)Set((2, 0x101324910)Declare((0, 0x1013247d0)GetIdentifier(int), (1, 0x101324888)GetLiteral(a)), (3, 0x101324990)GetLiteral(0))
+3 20,13 5
+// (5, 0x101325cc0)Block {
+// 	(6, 0x101325840)Function void _body(linking finished) {
+// 	(7, 0x101325620)Block {
+// 	(12, 0x101325580)Set((8, 0x1013252a0)ReferenceIdentifier(a), (11, 0x1013254c0)Add((9, 0x101325340)GetIdentifier(a), (10, 0x1013253e0)GetLiteral(1)))
 // }
 // }
-// 	(12)Block {
-// 	(13)Block {
-// 	(15)Call((14)GetIdentifier(_body))
+// 	(16, 0x101325d78)While((15, 0x101324bd0)CompareLessThan((13, 0x101324af0)GetIdentifier(a), (14, 0x101325150)GetLiteral(10)))
+// 	(17, 0x101325c40)Block {
+// 	(18, 0x101325aa0)Block {
+// 	(20, 0x101325b58)Call((19, 0x101325a00)GetIdentifier(_body))
 // }
-// 	(16)GoTo(-20)
-// }
-// }
-0 16,12,9,6 0 11 0
-// (6)Function void _body(linking finished) {
-// 	(7)Block {
-// 	(11)While((10)CompareLessThan((8)GetIdentifier(a), (9)GetLiteral(10)))
+// 	(21, 0x101325718)GoTo(-8)
 // }
 // }
-1 14,7 20 void _body
-// (7)Block {
-// 	(11)While((10)CompareLessThan((8)GetIdentifier(a), (9)GetLiteral(10)))
+0 21,17,14,13,10,9,6 0 16 0
+// (6, 0x101325840)Function void _body(linking finished) {
+// 	(7, 0x101325620)Block {
+// 	(12, 0x101325580)Set((8, 0x1013252a0)ReferenceIdentifier(a), (11, 0x1013254c0)Add((9, 0x101325340)GetIdentifier(a), (10, 0x1013253e0)GetLiteral(1)))
 // }
-1 9,8 0 4 0
-// (8)GetIdentifier(a)
-1 10.0 3 a
-// (9)GetLiteral(10)
-2 10.1 1 10
-// (10)CompareLessThan((8)GetIdentifier(a), (9)GetLiteral(10))
-2 11.0 12
-// (11)While((10)CompareLessThan((8)GetIdentifier(a), (9)GetLiteral(10)))
-1 19,18,22,12 17
-// (12)Block {
-// 	(13)Block {
-// 	(15)Call((14)GetIdentifier(_body))
 // }
-// 	(16)GoTo(-20)
+1 19,7 20 void _body
+// (7, 0x101325620)Block {
+// 	(12, 0x101325580)Set((8, 0x1013252a0)ReferenceIdentifier(a), (11, 0x1013254c0)Add((9, 0x101325340)GetIdentifier(a), (10, 0x1013253e0)GetLiteral(1)))
 // }
-2 16,13 0 4 0
-// (13)Block {
-// 	(15)Call((14)GetIdentifier(_body))
+1 10,9,8 0 5 0
+// (8, 0x1013252a0)ReferenceIdentifier(a)
+1 12.0 2 a
+// (9, 0x101325340)GetIdentifier(a)
+2 12,11.0 3 a
+// (10, 0x1013253e0)GetLiteral(1)
+2 11.1 1 1
+// (11, 0x1013254c0)Add((9, 0x101325340)GetIdentifier(a), (10, 0x1013253e0)GetLiteral(1))
+2 12.1 6
+// (12, 0x101325580)Set((8, 0x1013252a0)ReferenceIdentifier(a), (11, 0x1013254c0)Add((9, 0x101325340)GetIdentifier(a), (10, 0x1013253e0)GetLiteral(1)))
+3  5
+// (13, 0x101324af0)GetIdentifier(a)
+2 20,15.0 3 a
+// (14, 0x101325150)GetLiteral(10)
+1 15.1 1 10
+// (15, 0x101324bd0)CompareLessThan((13, 0x101324af0)GetIdentifier(a), (14, 0x101325150)GetLiteral(10))
+2 16.0 12
+// (16, 0x101325d78)While((15, 0x101324bd0)CompareLessThan((13, 0x101324af0)GetIdentifier(a), (14, 0x101325150)GetLiteral(10)))
+1 17 17
+// (17, 0x101325c40)Block {
+// 	(18, 0x101325aa0)Block {
+// 	(20, 0x101325b58)Call((19, 0x101325a00)GetIdentifier(_body))
 // }
-1 16,14 0 2 1 2
-// (14)GetIdentifier(_body)
-2 16,15.0 3 _body
-// (15)Call((14)GetIdentifier(_body))
-2 16 21 1 0 1 1 0 0 0
-// (16)GoTo(-20)
-5  18 -20
-// (17)Block {
-// 	(22)Set((18)ReferenceIdentifier(a), (21)Add((19)GetIdentifier(a), (20)GetLiteral(1)))
+// 	(21, 0x101325718)GoTo(-8)
 // }
-0 20,19,18 0 5 0
-// (18)ReferenceIdentifier(a)
-2 22.0 2 a
-// (19)GetIdentifier(a)
-2 22,21.0 3 a
-// (20)GetLiteral(1)
-1 21.1 1 1
-// (21)Add((19)GetIdentifier(a), (20)GetLiteral(1))
-2 22.1 6
-// (22)Set((18)ReferenceIdentifier(a), (21)Add((19)GetIdentifier(a), (20)GetLiteral(1)))
-4  5
+2 21,18 0 4 0
+// (18, 0x101325aa0)Block {
+// 	(20, 0x101325b58)Call((19, 0x101325a00)GetIdentifier(_body))
+// }
+1 21,19 0 2 1 2
+// (19, 0x101325a00)GetIdentifier(_body)
+2 21,20.0 3 _body
+// (20, 0x101325b58)Call((19, 0x101325a00)GetIdentifier(_body))
+3 21 21 1 0 1 5 0 0 0
+// (21, 0x101325718)GoTo(-8)
+5  18 -8
