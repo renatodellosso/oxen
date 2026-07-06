@@ -364,7 +364,7 @@ std::string FunctionExpression::toString(int indent) const {
 
   str += ") {\n";
 
-  str += "\t" + body.get()->toString(indent + 1) + "\n";
+  str += body.get()->toString(indent + 1) + "\n";
 
   return str + std::string(indent, '\t') + "}";
 }
