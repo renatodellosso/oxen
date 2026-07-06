@@ -73,6 +73,9 @@ struct Instruction {
 
   std::shared_ptr<Subprogram> program;
 
+  // Has this instruction been executed? NOT reset if re-executed
+  bool executed;
+
   Instruction(int id, std::shared_ptr<Scope<Value>> scope = nullptr);
 
   std::string toString();

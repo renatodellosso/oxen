@@ -384,20 +384,12 @@ void GraphLinker::processExpression(Expression &expr) {
           continue;
         }
 
-        if (&subexprs.at(i).get() == &block)
+        auto &inner = subexprs.at(i);
+
+        if (&inner.get() == &block)
           continue; // Don't add dependency to self
 
-        // Handle nested blocks
-        // auto found = expressions.find(expr.id + i + 1);
-        // if (found == expressions.end())
-        //   log(LOCATION,
-        //       "Block expression at {} expected to have "
-        //       "an inner expression at "
-        //       "id {}, but it did not exist!",
-        //       expr.toString(), expr.id + i + 1);
-
         // auto inner = found->second;
-        auto &inner = subexprs.at(i);
         if (inner.get().type == InstructionType::Block) {
           skip = static_cast<BlockExpression *>(&expr)->expressions.size();
         }

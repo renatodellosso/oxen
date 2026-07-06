@@ -166,16 +166,16 @@ void Executor::updateDependency(InstrDependent dep,
     fulfilled = dep.instr->depsFulfilled;
   }
 
+  if (cliArgs.verbose)
+    log(LOCATION, "\tUpdated dependency for {} with result {}",
+        dep.instr->toString(), result ? valToStr(*result) : "none");
+
   if (fulfilled == dep.instr->depCount) {
     if (cliArgs.verbose)
       log(LOCATION, "\tPushing instruction {} onto queue",
           dep.instr->toString());
     queue.push(*dep.instr);
   }
-
-  if (cliArgs.verbose)
-    log(LOCATION, "\tUpdated dependency for {} with result {}",
-        dep.instr->toString(), result ? valToStr(*result) : "none");
 }
 
 void Executor::skipInstruction(Instruction &instr, bool markSkippedAs) {
@@ -523,12 +523,38 @@ void Executor::execSingleInstruction(Instruction &instr) {
         instr.program->at(i).depArgs.clear();
       }
 
+      if (cliArgs.verbose) {
+        log(LOCATION,
+            "\tCleared depArgs for instruction {}. Updating dependencies...",
+            instr.program->at(i).toString());
+      }
+
       for (auto dep : instr.program->at(i).dependents) {
-        if (dep.instr->program == instr.program && dep.instr->id > returnTo &&
-            dep.instr->id <= instr.id && !dep.disabled) {
-          std::lock_guard<std::mutex> fulfilledLock(
-              depsFulfilledMutexes[dep.instr->id]);
-          dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
+        if (dep.instr->program != instr.program || dep.instr->id <= returnTo ||
+            dep.instr->id > instr.id || dep.disabled) {
+
+          std::string reason = dep.instr->program != instr.program
+                                   ? "not in the same program"
+                               : dep.instr->id <= returnTo ? "before the loop"
+                               : dep.instr->id > instr.id  ? "after the loop"
+                                                           : "disabled";
+
+          if (cliArgs.verbose) {
+            log(LOCATION,
+                "\t\tSkipping dependency for {} since it is not in the loop "
+                "({})",
+                dep.instr->toString(), reason);
+          }
+          continue;
+        }
+
+        std::lock_guard<std::mutex> fulfilledLock(
+            depsFulfilledMutexes[dep.instr->id]);
+        dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
+
+        if (dep.instr == &instr && cliArgs.verbose) {
+          log(LOCATION, "\tDecremented depsFulfilled from {} to {}",
+              instr.program->at(i).toString(), dep.instr->depsFulfilled);
         }
       }
     }
@@ -586,6 +612,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
     block.depsFulfilled++;
 
     // Handle dependency remapping
+
     auto res = parseDependencyRemappings(instr.bytecodeArgs);
     auto remaps = res.first;
 
@@ -705,6 +732,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
         std::format("Unknown instruction type on instruction {}: {}", instr.id,
                     (int)instr.type));
   }
+
+  instr.executed = true;
 
   if (updateDeps) {
     for (auto dep : instr.dependents) {
