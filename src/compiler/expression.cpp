@@ -364,9 +364,9 @@ std::string FunctionExpression::toString(int indent) const {
 
   str += ") {\n";
 
-  str += "\t" + body.get()->toString() + "\n";
+  str += "\t" + body.get()->toString(indent + 1) + "\n";
 
-  return str + "}";
+  return str + std::string(indent, '\t') + "}";
 }
 
 void FunctionExpression::findReturnStatements() {

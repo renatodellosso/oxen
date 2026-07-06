@@ -375,29 +375,32 @@ void GraphLinker::processExpression(Expression &expr) {
         previousBranchMerge = ifExpr ? ifExpr->mergeInstruction.get() : nullptr;
       }
 
+      auto subexprs = block.getWithSubExpressions();
+
       int skip = 0;
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < subexprs.size(); i++) {
         if (skip > 0) {
           skip--;
           continue;
         }
 
-        // Handle nested blocks
-        auto found = expressions.find(expr.id + i + 1);
-        if (found == expressions.end())
-          log(LOCATION,
-              "Block expression at {} expected to have "
-              "an inner expression at "
-              "id {}, but it did not exist!",
-              expr.toString(), expr.id + i + 1);
+        if (&subexprs.at(i).get() == &block)
+          continue; // Don't add dependency to self
 
-        auto inner = found->second;
+        // Handle nested blocks
+        // auto found = expressions.find(expr.id + i + 1);
+        // if (found == expressions.end())
+        //   log(LOCATION,
+        //       "Block expression at {} expected to have "
+        //       "an inner expression at "
+        //       "id {}, but it did not exist!",
+        //       expr.toString(), expr.id + i + 1);
+
+        // auto inner = found->second;
+        auto &inner = subexprs.at(i);
         if (inner.get().type == InstructionType::Block) {
           skip = static_cast<BlockExpression *>(&expr)->expressions.size();
         }
-
-        if (cliArgs.verbose)
-          log(LOCATION, "Inner expression: {}", inner.get().toString());
 
         // Only add dependencies to root-level expressions, blocks, and
         // functions. All other exprs will have intra-block dependencies that
@@ -406,6 +409,9 @@ void GraphLinker::processExpression(Expression &expr) {
             inner.get().type != InstructionType::Function &&
             dynamic_cast<RootExpression *>(&inner.get()) == nullptr)
           continue;
+
+        if (cliArgs.verbose)
+          log(LOCATION, "Base Expr inside Block: {}", inner.get().toString());
 
         addDependency(inner, expr);
 
