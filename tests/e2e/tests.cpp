@@ -211,6 +211,49 @@ std::vector<E2eTest> tests = {
      "}\n",
      {"0 0 0", "0 0 1", "0 1 0", "0 1 1", "1 0 0", "1 0 1", "1 1 0", "1 1 1",
       "2 0 0", "2 0 1", "2 1 0", "2 1 1"}},
+    {
+        "WhileLoopsCanCountIterationsCorrectly",
+        "int sum = 0;\n"
+        "int i = 0;\n"
+        "while (i < 3) {\n"
+        "sum = sum + i;\n"
+        "i = i + 1;\n"
+        "}\n"
+        "print sum;",
+        {"3"},
+    },
+    {
+        "WhileLoopsCanBeNestedAndCountIterationsCorrectly",
+        "int sum = 0;\n"
+        "int i = 0;\n"
+        "while (i < 3) {\n"
+        "int j = 0;\n"
+        "while (j < 2) {\n"
+        "sum = sum + i + j;\n"
+        "j = j + 1;\n"
+        "}\n"
+        "i = i + 1;\n"
+        "}\n"
+        "print sum;",
+        {"9"},
+    },
+    {"WhileLoopsCanBeNestedAndCountIterationsCorrectlyWithDoublyNestedLoops",
+     "int sum = 0;\n"
+     "int i = 0;\n"
+     "while (i < 3) {\n"
+     "int j = 0;\n"
+     "while (j < 2) {\n"
+     "int k = 0;\n"
+     "while (k < 2) {\n"
+     "sum = sum + i + j + k;\n"
+     "k = k + 1;\n"
+     "}\n"
+     "j = j + 1;\n"
+     "}\n"
+     "i = i + 1;\n"
+     "}\n"
+     "print sum;",
+     {"24"}},
 
     // Functions
     {"FunctionsCanBeDeclared", "void main() { print 1; }", {}},

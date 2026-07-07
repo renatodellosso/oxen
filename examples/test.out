@@ -1,77 +1,233 @@
-// (0, 0x10125c690)GetIdentifier(int)
+// (0, 0x105444650)GetIdentifier(int)
 0 2.0 3 int
-// (1, 0x10125c748)GetLiteral(a)
-0 2.1 1 a
-// (2, 0x10125c7d0)Declare((0, 0x10125c690)GetIdentifier(int), (1, 0x10125c748)GetLiteral(a))
+// (1, 0x105444708)GetLiteral(sum)
+0 2.1 1 sum
+// (2, 0x105444790)Declare((0, 0x105444650)GetIdentifier(int), (1, 0x105444708)GetLiteral(sum))
 2 4.0,4 4
-// (3, 0x10125c850)GetLiteral(0)
+// (3, 0x105444810)GetLiteral(0)
 0 4.1 1 0
-// (4, 0x10125c910)Set((2, 0x10125c7d0)Declare((0, 0x10125c690)GetIdentifier(int), (1, 0x10125c748)GetLiteral(a)), (3, 0x10125c850)GetLiteral(0))
-3 22,15 5
-// (5, 0x10125dcf0)Block {
-// 	(6, 0x10125d890)Function void _body(linking finished) {
-// 		(7, 0x10125d670)Block {
-// 			(12, 0x10125d460)Set((8, 0x10125d180)ReferenceIdentifier(a), (11, 0x10125d3a0)Add((9, 0x10125d220)GetIdentifier(a), (10, 0x10125d2c0)GetLiteral(1)))
-// 			(14, 0x10125d5a0)Print((13, 0x10125d500)GetIdentifier(a))
+// (4, 0x1054448f0)Set((2, 0x105444790)Declare((0, 0x105444650)GetIdentifier(int), (1, 0x105444708)GetLiteral(sum)), (3, 0x105444810)GetLiteral(0))
+3 56 5
+// (5, 0x105444990)GetIdentifier(int)
+0 7.0 3 int
+// (6, 0x105444a68)GetLiteral(j)
+0 7.1 1 j
+// (7, 0x105444af0)Declare((5, 0x105444990)GetIdentifier(int), (6, 0x105444a68)GetLiteral(j))
+2 9.0,9 4
+// (8, 0x105444b70)GetLiteral(0)
+0 9.1 1 0
+// (9, 0x105444c50)Set((7, 0x105444af0)Declare((5, 0x105444990)GetIdentifier(int), (6, 0x105444a68)GetLiteral(j)), (8, 0x105444b70)GetLiteral(0))
+3 56,49 5
+// (10, 0x1054476d0)Block {
+// 	(11, 0x1054472f0)Function void _body(linking finished) {
+// 		(12, 0x8db000000)Block {
+// 			(17, 0x105445cb0)Set((15, 0x105445b50)Declare((13, 0x105445a10)GetIdentifier(int), (14, 0x105445ac8)GetLiteral(k)), (16, 0x105445bd0)GetLiteral(0))
+// 			(18, 0x105446ff0)Block {
+// 				(19, 0x105446b70)Function void _body(linking finished) {
+// 					(20, 0x105446670)Block {
+// 						(24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
+// 						(29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+// 						(34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+// 					}
+// 				}
+// 				(38, 0x1054470c8)While((37, 0x105445ed0)CompareLessThan((35, 0x105445d50)GetIdentifier(k), (36, 0x105445df0)GetLiteral(2)))
+// 				(39, 0x105446f70)Block {
+// 					(40, 0x105446dd0)Block {
+// 						(42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
+// 					}
+// 					(43, 0x105446a48)GoTo(-8)
+// 				}
+// 			}
+// 			(48, 0x105446800)Set((44, 0x8dac0c3c0)ReferenceIdentifier(j), (47, 0x105446740)Add((45, 0x8dac0c460)GetIdentifier(j), (46, 0x8dac0c500)GetLiteral(1)))
 // 		}
 // 	}
-// 	(18, 0x10125ddc8)While((17, 0x10125ca90)CompareLessThan((15, 0x10125c9b0)GetIdentifier(a), (16, 0x10125d010)GetLiteral(10)))
-// 	(19, 0x10125dc70)Block {
-// 		(20, 0x10125daf0)Block {
-// 			(22, 0x10125dba8)Call((21, 0x10125da50)GetIdentifier(_body))
+// 	(52, 0x105447768)While((51, 0x105444e90)CompareLessThan((49, 0x105444d10)GetIdentifier(j), (50, 0x105444db0)GetLiteral(2)))
+// 	(53, 0x105446ad0)Block {
+// 		(54, 0x105447550)Block {
+// 			(56, 0x105447608)Call((55, 0x1054474b0)GetIdentifier(_body))
 // 		}
-// 		(23, 0x10125d768)GoTo(-8)
+// 		(57, 0x1054471c8)GoTo(-8)
 // 	}
 // }
-0 19,16,23,13,15,10,6 0 18 0
-// (6, 0x10125d890)Function void _body(linking finished) {
-// 	(7, 0x10125d670)Block {
-// 		(12, 0x10125d460)Set((8, 0x10125d180)ReferenceIdentifier(a), (11, 0x10125d3a0)Add((9, 0x10125d220)GetIdentifier(a), (10, 0x10125d2c0)GetLiteral(1)))
-// 		(14, 0x10125d5a0)Print((13, 0x10125d500)GetIdentifier(a))
+0 57,50,49,44,45,43,39,36,31,30,27,35,53,22,25,46,16,18,26,32,11 0 47 0
+// (11, 0x1054472f0)Function void _body(linking finished) {
+// 	(12, 0x8db000000)Block {
+// 		(17, 0x105445cb0)Set((15, 0x105445b50)Declare((13, 0x105445a10)GetIdentifier(int), (14, 0x105445ac8)GetLiteral(k)), (16, 0x105445bd0)GetLiteral(0))
+// 		(18, 0x105446ff0)Block {
+// 			(19, 0x105446b70)Function void _body(linking finished) {
+// 				(20, 0x105446670)Block {
+// 					(24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
+// 					(29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+// 					(34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+// 				}
+// 			}
+// 			(38, 0x1054470c8)While((37, 0x105445ed0)CompareLessThan((35, 0x105445d50)GetIdentifier(k), (36, 0x105445df0)GetLiteral(2)))
+// 			(39, 0x105446f70)Block {
+// 				(40, 0x105446dd0)Block {
+// 					(42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
+// 				}
+// 				(43, 0x105446a48)GoTo(-8)
+// 			}
+// 		}
+// 		(48, 0x105446800)Set((44, 0x8dac0c3c0)ReferenceIdentifier(j), (47, 0x105446740)Add((45, 0x8dac0c460)GetIdentifier(j), (46, 0x8dac0c500)GetLiteral(1)))
 // 	}
 // }
-1 21,7 20 void _body
-// (7, 0x10125d670)Block {
-// 	(12, 0x10125d460)Set((8, 0x10125d180)ReferenceIdentifier(a), (11, 0x10125d3a0)Add((9, 0x10125d220)GetIdentifier(a), (10, 0x10125d2c0)GetLiteral(1)))
-// 	(14, 0x10125d5a0)Print((13, 0x10125d500)GetIdentifier(a))
+1 55,12 20 void _body
+// (12, 0x8db000000)Block {
+// 	(17, 0x105445cb0)Set((15, 0x105445b50)Declare((13, 0x105445a10)GetIdentifier(int), (14, 0x105445ac8)GetLiteral(k)), (16, 0x105445bd0)GetLiteral(0))
+// 	(18, 0x105446ff0)Block {
+// 		(19, 0x105446b70)Function void _body(linking finished) {
+// 			(20, 0x105446670)Block {
+// 				(24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
+// 				(29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+// 				(34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+// 			}
+// 		}
+// 		(38, 0x1054470c8)While((37, 0x105445ed0)CompareLessThan((35, 0x105445d50)GetIdentifier(k), (36, 0x105445df0)GetLiteral(2)))
+// 		(39, 0x105446f70)Block {
+// 			(40, 0x105446dd0)Block {
+// 				(42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
+// 			}
+// 			(43, 0x105446a48)GoTo(-8)
+// 		}
+// 	}
+// 	(48, 0x105446800)Set((44, 0x8dac0c3c0)ReferenceIdentifier(j), (47, 0x105446740)Add((45, 0x8dac0c460)GetIdentifier(j), (46, 0x8dac0c500)GetLiteral(1)))
 // }
-1 13,10,9,8 0 7 0
-// (8, 0x10125d180)ReferenceIdentifier(a)
-1 12.0 2 a
-// (9, 0x10125d220)GetIdentifier(a)
-1 12,11.0 3 a
-// (10, 0x10125d2c0)GetLiteral(1)
-2 11.1 1 1
-// (11, 0x10125d3a0)Add((9, 0x10125d220)GetIdentifier(a), (10, 0x10125d2c0)GetLiteral(1))
-2 12.1 6
-// (12, 0x10125d460)Set((8, 0x10125d180)ReferenceIdentifier(a), (11, 0x10125d3a0)Add((9, 0x10125d220)GetIdentifier(a), (10, 0x10125d2c0)GetLiteral(1)))
-3 13 5
-// (13, 0x10125d500)GetIdentifier(a)
-3 14.0 3 a
-// (14, 0x10125d5a0)Print((13, 0x10125d500)GetIdentifier(a))
+1 44,45,43,39,36,35,32,31,30,27,25,22,26,46,18,16,14,13 0 36 0
+// (13, 0x105445a10)GetIdentifier(int)
+1 15.0 3 int
+// (14, 0x105445ac8)GetLiteral(k)
+1 15.1 1 k
+// (15, 0x105445b50)Declare((13, 0x105445a10)GetIdentifier(int), (14, 0x105445ac8)GetLiteral(k))
+2 17.0,17 4
+// (16, 0x105445bd0)GetLiteral(0)
+2 17.1 1 0
+// (17, 0x105445cb0)Set((15, 0x105445b50)Declare((13, 0x105445a10)GetIdentifier(int), (14, 0x105445ac8)GetLiteral(k)), (16, 0x105445bd0)GetLiteral(0))
+3 42,35 5
+// (18, 0x105446ff0)Block {
+// 	(19, 0x105446b70)Function void _body(linking finished) {
+// 		(20, 0x105446670)Block {
+// 			(24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
+// 			(29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+// 			(34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+// 		}
+// 	}
+// 	(38, 0x1054470c8)While((37, 0x105445ed0)CompareLessThan((35, 0x105445d50)GetIdentifier(k), (36, 0x105445df0)GetLiteral(2)))
+// 	(39, 0x105446f70)Block {
+// 		(40, 0x105446dd0)Block {
+// 			(42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
+// 		}
+// 		(43, 0x105446a48)GoTo(-8)
+// 	}
+// }
+2 43,39,35,32,30,27,26,36,25,31,19 0 25 0
+// (19, 0x105446b70)Function void _body(linking finished) {
+// 	(20, 0x105446670)Block {
+// 		(24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
+// 		(29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+// 		(34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+// 	}
+// }
+1 41,20 20 void _body
+// (20, 0x105446670)Block {
+// 	(24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
+// 	(29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+// 	(34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+// }
+1 32,31,30,27,26,25,22,21 0 14 0
+// (21, 0x105446020)GetLiteral("k: ")
+1 23.0 1 "k: "
+// (22, 0x1054460c0)GetIdentifier(k)
+3 29,23.1 3 k
+// (23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k))
+2 24.0 6
+// (24, 0x105446220)Print((23, 0x1054461a0)Add((21, 0x105446020)GetLiteral("k: "), (22, 0x1054460c0)GetIdentifier(k)))
 1  19
-// (15, 0x10125c9b0)GetIdentifier(a)
-2 22,17.0 3 a
-// (16, 0x10125d010)GetLiteral(10)
-1 17.1 1 10
-// (17, 0x10125ca90)CompareLessThan((15, 0x10125c9b0)GetIdentifier(a), (16, 0x10125d010)GetLiteral(10))
-2 18.0 12
-// (18, 0x10125ddc8)While((17, 0x10125ca90)CompareLessThan((15, 0x10125c9b0)GetIdentifier(a), (16, 0x10125d010)GetLiteral(10)))
-1 19 17
-// (19, 0x10125dc70)Block {
-// 	(20, 0x10125daf0)Block {
-// 		(22, 0x10125dba8)Call((21, 0x10125da50)GetIdentifier(_body))
+// (25, 0x8dac0c000)ReferenceIdentifier(k)
+4 29.0 2 k
+// (26, 0x8dac0c0a0)GetIdentifier(k)
+4 29,28.0 3 k
+// (27, 0x8dac0c140)GetLiteral(1)
+4 28.1 1 1
+// (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1))
+2 29.1 6
+// (29, 0x1054463d0)Set((25, 0x8dac0c000)ReferenceIdentifier(k), (28, 0x105446310)Add((26, 0x8dac0c0a0)GetIdentifier(k), (27, 0x8dac0c140)GetLiteral(1)))
+4  5
+// (30, 0x8dac0c1e0)ReferenceIdentifier(sum)
+4 34.0 2 sum
+// (31, 0x8dac0c280)GetIdentifier(sum)
+4 34,33.0 3 sum
+// (32, 0x8dac0c320)GetLiteral(1)
+4 33.1 1 1
+// (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1))
+2 34.1 6
+// (34, 0x105446590)Set((30, 0x8dac0c1e0)ReferenceIdentifier(sum), (33, 0x1054464d0)Add((31, 0x8dac0c280)GetIdentifier(sum), (32, 0x8dac0c320)GetLiteral(1)))
+3  5
+// (35, 0x105445d50)GetIdentifier(k)
+4 42,37.0 3 k
+// (36, 0x105445df0)GetLiteral(2)
+3 37.1 1 2
+// (37, 0x105445ed0)CompareLessThan((35, 0x105445d50)GetIdentifier(k), (36, 0x105445df0)GetLiteral(2))
+2 38.0 12
+// (38, 0x1054470c8)While((37, 0x105445ed0)CompareLessThan((35, 0x105445d50)GetIdentifier(k), (36, 0x105445df0)GetLiteral(2)))
+1 39 17
+// (39, 0x105446f70)Block {
+// 	(40, 0x105446dd0)Block {
+// 		(42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
 // 	}
-// 	(23, 0x10125d768)GoTo(-8)
+// 	(43, 0x105446a48)GoTo(-8)
 // }
-2 23,20 0 4 0
-// (20, 0x10125daf0)Block {
-// 	(22, 0x10125dba8)Call((21, 0x10125da50)GetIdentifier(_body))
+4 43,40 0 4 0
+// (40, 0x105446dd0)Block {
+// 	(42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
 // }
-1 23,21 0 2 1 2
-// (21, 0x10125da50)GetIdentifier(_body)
-2 23,22.0 3 _body
-// (22, 0x10125dba8)Call((21, 0x10125da50)GetIdentifier(_body))
-3 23 21 1 0 2 5 6 0 0 0
-// (23, 0x10125d768)GoTo(-8)
+1 43,41 0 2 1 2
+// (41, 0x105446d30)GetIdentifier(_body)
+2 43,42.0 3 _body
+// (42, 0x105446e88)Call((41, 0x105446d30)GetIdentifier(_body))
+3 43 21 1 0 1 14 0 0 0
+// (43, 0x105446a48)GoTo(-8)
+7  18 -8
+// (44, 0x8dac0c3c0)ReferenceIdentifier(j)
+2 48.0 2 j
+// (45, 0x8dac0c460)GetIdentifier(j)
+2 48,47.0 3 j
+// (46, 0x8dac0c500)GetLiteral(1)
+2 47.1 1 1
+// (47, 0x105446740)Add((45, 0x8dac0c460)GetIdentifier(j), (46, 0x8dac0c500)GetLiteral(1))
+2 48.1 6
+// (48, 0x105446800)Set((44, 0x8dac0c3c0)ReferenceIdentifier(j), (47, 0x105446740)Add((45, 0x8dac0c460)GetIdentifier(j), (46, 0x8dac0c500)GetLiteral(1)))
+3  5
+// (49, 0x105444d10)GetIdentifier(j)
+2 56,51.0 3 j
+// (50, 0x105444db0)GetLiteral(2)
+1 51.1 1 2
+// (51, 0x105444e90)CompareLessThan((49, 0x105444d10)GetIdentifier(j), (50, 0x105444db0)GetLiteral(2))
+2 52.0 12
+// (52, 0x105447768)While((51, 0x105444e90)CompareLessThan((49, 0x105444d10)GetIdentifier(j), (50, 0x105444db0)GetLiteral(2)))
+1 59,53 17
+// (53, 0x105446ad0)Block {
+// 	(54, 0x105447550)Block {
+// 		(56, 0x105447608)Call((55, 0x1054474b0)GetIdentifier(_body))
+// 	}
+// 	(57, 0x1054471c8)GoTo(-8)
+// }
+2 57,54 0 4 0
+// (54, 0x105447550)Block {
+// 	(56, 0x105447608)Call((55, 0x1054474b0)GetIdentifier(_body))
+// }
+1 57,55 0 2 1 2
+// (55, 0x1054474b0)GetIdentifier(_body)
+2 57,56.0 3 _body
+// (56, 0x105447608)Call((55, 0x1054474b0)GetIdentifier(_body))
+4 57 21 1 0 1 1 0 0 0
+// (57, 0x1054471c8)GoTo(-8)
 5  18 -8
+// (58, 0x8dac0c5a0)GetLiteral("Sum: ")
+0 60.0 1 "Sum: "
+// (59, 0x8dac0c640)GetIdentifier(sum)
+1 60.1 3 sum
+// (60, 0x8db000080)Add((58, 0x8dac0c5a0)GetLiteral("Sum: "), (59, 0x8dac0c640)GetIdentifier(sum))
+2 61.0 6
+// (61, 0x105446900)Print((60, 0x8db000080)Add((58, 0x8dac0c5a0)GetLiteral("Sum: "), (59, 0x8dac0c640)GetIdentifier(sum)))
+1  19
