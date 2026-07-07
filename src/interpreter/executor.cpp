@@ -290,6 +290,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
         call.get().dependents.push_back(dep);
       }
 
+      if (cliArgs.verbose)
+        log(LOCATION,
+            "Disabling {} dependency since it is now handled by calls",
+            dep.instr->toString());
       dep.disabled = true;
     }
 
@@ -531,7 +535,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
       for (auto dep : instr.program->at(i).dependents) {
         if (dep.instr->program != instr.program || dep.instr->id <= returnTo ||
-            dep.instr->id > instr.id || dep.disabled) {
+            dep.instr->id > instr.id ||
+            (dep.disabled &&
+             instr.program->at(i).type != InstructionType::Call &&
+             dep.instr != &instr)) {
 
           std::string reason = dep.instr->program != instr.program
                                    ? "not in the same program"
@@ -618,9 +625,16 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     for (auto remap : remaps) {
       auto &dependent = instr.dependents[remap.first];
+      dependent.disabled =
+          false; // Re-enable dependent since we might've previously disabled it
 
-      for (auto dependencyIndex : remap.second)
+      for (auto dependencyIndex : remap.second) {
+        if (cliArgs.verbose)
+          log(LOCATION, "\tMade {} depend on {}",
+              body->at(dependencyIndex).toString(),
+              dependent.instr->toString());
         body->at(dependencyIndex).dependents.push_back(dependent);
+      }
 
       // Adjust depCount accordingly
       {
@@ -629,6 +643,11 @@ void Executor::execSingleInstruction(Instruction &instr) {
         dependent.instr->depCount += remap.second.size() - 1;
       }
 
+      if (cliArgs.verbose)
+        log(LOCATION,
+            "Disabling {} dependency since it is now handled by dependency "
+            "remaps",
+            dependent.instr->toString());
       dependent.disabled = true;
     }
 
@@ -678,6 +697,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
         body->at(returnId).dependents.push_back(returnDep);
       }
 
+      if (cliArgs.verbose)
+        log(LOCATION,
+            "Disabling {} dependency since it is now handled by returns",
+            dep.instr->toString());
       dep.disabled = true;
     }
 
