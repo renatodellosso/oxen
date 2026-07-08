@@ -1,6 +1,8 @@
 #include "instruction.hpp"
+#include "color.hpp"
 #include <format>
 #include <memory>
+#include <string>
 
 std::string instructionTypeToString(InstructionType type) {
   switch (type) {
@@ -77,10 +79,16 @@ Instruction::Instruction(int id, std::shared_ptr<Scope<Value>> scope)
       scope(scope) {}
 
 std::string Instruction::toString() {
+  auto depCountStr = std::format("{}/{}", depsFulfilled, depCount);
+  if (depsFulfilled == depCount)
+    depCountStr = colorize(depCountStr, Color::Green);
+  else
+    depCountStr = colorize(depCountStr, Color::Yellow);
+
   std::string str = std::format(
-      "({}){}(dependencies: {}/{}, scope depth: {}, bytecode args: [", id,
-      instructionTypeToString(type), depsFulfilled, depCount,
-      scope ? scope->getDepth() : -1);
+      "({}){}(dependencies: {}, scope depth: {}, bytecode args: [",
+      colorize(std::to_string(id), Color::Cyan), instructionTypeToString(type),
+      depCountStr, scope ? scope->getDepth() : -1);
 
   for (auto arg : bytecodeArgs)
     str += valToStr(arg, true) + ", ";
@@ -99,17 +107,14 @@ std::string Instruction::toString() {
   str += "], dependents: [";
 
   for (auto dep : dependents) {
-    if (dep.disabled)
-      str += "-";
-    
-    str += std::to_string(dep.instr->id);
+    auto depStr = std::to_string(dep.instr->id);
     if (dep.argIndex.has_value())
-      str += "." + std::to_string(dep.argIndex.value());
+      depStr += "." + std::to_string(dep.argIndex.value());
 
     if (dep.disabled)
-      str += "-";
+      depStr = colorize(depStr, Color::Red);
 
-    str += ", ";
+    str += depStr + ", ";
   }
   if (dependents.size() > 0)
     str = str.substr(0, str.length() - 2);

@@ -1,4 +1,5 @@
 #include "interpreter.hpp"
+#include "../color.hpp"
 #include "../logging.hpp"
 #include "../utils.hpp"
 #include "bytecodeParser.hpp"
@@ -40,7 +41,10 @@ ExitCode Interpreter::interpret(std::istream &stream) {
 
     delete executor;
   } catch (std::runtime_error err) {
-    logError(LOCATION, "Encountered error executing bytecode: {}", err.what());
+    logError(LOCATION, "{}",
+             colorize(std::format("Encountered error executing bytecode: {}",
+                                  err.what()),
+                      Color::Red));
     return ExitCode::ExecutionError;
   }
 

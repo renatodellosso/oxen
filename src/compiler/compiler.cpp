@@ -1,10 +1,11 @@
 #include "compiler.hpp"
+#include "../color.hpp"
 #include "../logging.hpp"
-#include "../utils.hpp"
 #include "astBuilder.hpp"
 #include "graphLinker.hpp"
 #include "tokenizer.hpp"
 #include <cmath>
+#include <format>
 
 #define LOCATION "compiler"
 
@@ -90,11 +91,14 @@ compile(const CliArgs &args, std::istream &inputStream,
   auto result = writeOutput(bytecode);
 
   if (result.has_value()) {
-    logError(LOCATION, "Failed to write bytecode to file: {}", result.value());
+    logError(LOCATION, "{}",
+             colorize(std::format("Failed to write bytecode to file: {}",
+                                  result.value()),
+                      Color::Red));
     return ExitCode::FailedToWriteFile;
   }
 
   if (shouldLog)
-    log(LOCATION, "Wrote bytecode to file!");
+    log(LOCATION, "{}", colorize("Wrote bytecode to file!", Color::Green));
   return ExitCode::Ok;
 }
