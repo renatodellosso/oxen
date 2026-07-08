@@ -27,7 +27,10 @@ ExitCode Interpreter::interpret(std::istream &stream) {
 
     delete parser; // match new with delete
   } catch (std::runtime_error err) {
-    logError(LOCATION, "Encountered error parsing bytecode: {}", err.what());
+    logError(LOCATION, "{}",
+             colorize(std::format("Encountered error parsing bytecode: {}",
+                                  err.what()),
+                      Color::Red));
     return ExitCode::BytecodeParseError;
   }
 
