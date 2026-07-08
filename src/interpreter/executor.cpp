@@ -1,4 +1,5 @@
 #include "executor.hpp"
+#include "../color.hpp"
 #include "../logging.hpp"
 #include "../scope.hpp"
 #include "function.hpp"
@@ -879,8 +880,8 @@ void Executor::startExecution() {
   supervisor();
 
   if (cliArgs.verbose)
-    log(LOCATION, "Done! Executed {} instructions. Halt cause: {}",
-        program.size(), haltCause);
+    log(LOCATION, "{} Executed {} instructions. Halt cause: {}",
+        colorize("Done!", Color::Green), program.size(), haltCause);
 
   if (failed)
     throw std::runtime_error(haltCause);
