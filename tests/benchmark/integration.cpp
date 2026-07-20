@@ -2,6 +2,7 @@
 #include "../../benchmark/runner.hpp"
 #include "../../src/cliUtils.hpp"
 #include "../../src/compiler/compiler.hpp"
+#include "../../src/error.hpp"
 #include "../../src/interpreter/executor.hpp"
 #include "../../src/interpreter/interpreter.hpp"
 #include "../../src/streamRedirect.hpp"
@@ -55,7 +56,7 @@ TEST_F(BenchmarkFixture, SharedExecutionCompilesAndCollectsStatistics) {
 
   std::istringstream bytecodeStream(bytecode);
   ExecutionStats stats;
-  EXPECT_EQ(executeBytecode(args, bytecodeStream, &stats), ExitCode::Ok);
+  EXPECT_NO_THROW(executeBytecode(args, bytecodeStream, &stats));
   EXPECT_GT(stats.executedInstructions.load(), 0);
 }
 
@@ -101,6 +102,20 @@ TEST_F(BenchmarkFixture, ReportsUnreadableSourceWithProgramPath) {
         }
       },
       std::runtime_error);
+}
+
+TEST_F(BenchmarkFixture, ReportsExecutionCauseWithProgramPath) {
+  auto path = writeProgram("invalid-operation.p", "bool value = true < false;");
+  Program program{.group = "smoke", .name = "invalid-operation", .path = path};
+
+  try {
+    runTrial(program, 1);
+    FAIL() << "Expected execution to fail";
+  } catch (const Error &error) {
+    EXPECT_EQ(error.getCode(), ExitCode::ExecutionError);
+    EXPECT_THAT(error.what(), HasSubstr(path.string()));
+    EXPECT_THAT(error.what(), HasSubstr("Invalid arg types"));
+  }
 }
 
 TEST(StreamRedirect, RestoresStreamAfterException) {

@@ -78,8 +78,9 @@ instructions. A run that executes no instructions is treated as an error.
 
 Internal benchmark failures use exceptions with relevant paths or exit codes.
 Only `runApplication` catches them for command-line presentation. Compiler and
-interpreter failures retain their existing `ExitCode` APIs and are converted to
-benchmark errors by `runTrial`.
+interpreter failures retain their CLI `ExitCode` behavior. The shared `Error`
+type lets the benchmark preserve interpreter diagnostics while carrying the
+corresponding exit code to an application boundary.
 
 Tests live under `tests/benchmark`. Unit tests cover parsing, discovery,
 aggregation, and formatting using deterministic inputs. Integration tests use

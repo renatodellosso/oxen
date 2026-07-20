@@ -1,5 +1,6 @@
 #include "interpreter.hpp"
 #include "../color.hpp"
+#include "../error.hpp"
 #include "../logging.hpp"
 #include "../utils.hpp"
 #include "bytecodeParser.hpp"
@@ -14,18 +15,16 @@
 
 #define LOCATION "Interpreter"
 
-ExitCode executeBytecode(const CliArgs &args, std::istream &bytecode,
-                         ExecutionStats *stats) {
+void executeBytecode(const CliArgs &args, std::istream &bytecode,
+                     ExecutionStats *stats) {
   std::vector<Instruction> instructions;
   try {
     BytecodeParser parser(args, instructions, bytecode);
     parser.buildInstructions();
   } catch (const std::runtime_error &err) {
-    logError(LOCATION, "{}",
-             colorize(std::format("Encountered error parsing bytecode: {}",
-                                  err.what()),
-                      Color::Red));
-    return ExitCode::BytecodeParseError;
+    throw Error(
+        ExitCode::BytecodeParseError,
+        std::format("Encountered error parsing bytecode: {}", err.what()));
   }
 
   try {
@@ -38,14 +37,10 @@ ExitCode executeBytecode(const CliArgs &args, std::istream &bytecode,
     Executor executor(args, *program, stats);
     executor.startExecution();
   } catch (const std::runtime_error &err) {
-    logError(LOCATION, "{}",
-             colorize(std::format("Encountered error executing bytecode: {}",
-                                  err.what()),
-                      Color::Red));
-    return ExitCode::ExecutionError;
+    throw Error(
+        ExitCode::ExecutionError,
+        std::format("Encountered error executing bytecode: {}", err.what()));
   }
-
-  return ExitCode::Ok;
 }
 
 Interpreter::Interpreter(const CliArgs &args) : args(args) {}
@@ -56,9 +51,12 @@ ExitCode Interpreter::interpret(std::istream &stream, ExecutionStats *stats) {
   if (args.verbose)
     log(LOCATION, "Interpreting file '{}'...", args.target);
 
-  ExitCode exitCode = executeBytecode(args, stream, stats);
-  if (exitCode != ExitCode::Ok)
-    return exitCode;
+  try {
+    executeBytecode(args, stream, stats);
+  } catch (const Error &error) {
+    logError(LOCATION, "{}", colorize(error.what(), Color::Red));
+    return error.getCode();
+  }
 
   auto end = std::chrono::steady_clock::now();
 

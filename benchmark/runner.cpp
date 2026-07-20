@@ -1,6 +1,7 @@
 #include "runner.hpp"
 #include "../src/cliUtils.hpp"
 #include "../src/compiler/compiler.hpp"
+#include "../src/error.hpp"
 #include "../src/interpreter/executor.hpp"
 #include "../src/interpreter/interpreter.hpp"
 #include "../src/streamRedirect.hpp"
@@ -27,8 +28,8 @@ TrialResult runTrial(const Program &program, int threads) {
 
   std::ifstream source(program.path);
   if (!source.is_open())
-    throw std::runtime_error(std::format(
-        "Could not open benchmark source '{}'", program.path.string()));
+    throw std::runtime_error(std::format("Could not open benchmark source '{}'",
+                                         program.path.string()));
 
   auto compileStart = Clock::now();
   std::string bytecode;
@@ -42,23 +43,23 @@ TrialResult runTrial(const Program &program, int threads) {
   std::istringstream bytecodeStream(bytecode);
   ExecutionStats stats;
   auto runStart = Clock::now();
-  ExitCode executionExit;
   {
     // Program output would otherwise be mixed into the benchmark report.
     std::ostringstream ignoredOutput;
     ScopedStreamRedirect redirect(std::cout, ignoredOutput.rdbuf());
-    executionExit = executeBytecode(args, bytecodeStream, &stats);
+    try {
+      executeBytecode(args, bytecodeStream, &stats);
+    } catch (const Error &error) {
+      throw Error(error.getCode(),
+                  std::format("Execution failed for '{}': {}",
+                              program.path.string(), error.what()));
+    }
   }
   auto runEnd = Clock::now();
-  if (executionExit != ExitCode::Ok)
-    throw std::runtime_error(
-        std::format("Execution failed for '{}' with exit code {}",
-                    program.path.string(), static_cast<int>(executionExit)));
 
-  return {.compileTime =
-              std::chrono::duration_cast<Nanoseconds>(compileEnd - compileStart),
-          .runTime =
-              std::chrono::duration_cast<Nanoseconds>(runEnd - runStart),
+  return {.compileTime = std::chrono::duration_cast<Nanoseconds>(compileEnd -
+                                                                 compileStart),
+          .runTime = std::chrono::duration_cast<Nanoseconds>(runEnd - runStart),
           .executedInstructions =
               stats.executedInstructions.load(std::memory_order_relaxed)};
 }
