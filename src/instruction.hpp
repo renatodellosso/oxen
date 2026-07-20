@@ -44,13 +44,16 @@ std::string instructionTypeToString(InstructionType type);
 
 struct Instruction;
 struct ReturnInvocation;
+struct CallCompletion;
 
 struct InstrDependent {
   Instruction *instr;
   std::optional<int> argIndex;
 
   bool disabled;
+  bool completionBarrierRemapped;
   std::shared_ptr<ReturnInvocation> returnInvocation;
+  std::shared_ptr<CallCompletion> callCompletion;
 
   InstrDependent(Instruction *instr, std::optional<int> argIndex);
   InstrDependent(Instruction *instr, int argIndex);
@@ -67,6 +70,18 @@ struct ReturnInvocation {
 
   ReturnInvocation(std::uint64_t id,
                    std::vector<InstrDependent> dependents);
+};
+
+// Collects all resource and terminal-effect signals for one remapped call
+// dependency, then releases the caller exactly once.
+struct CallCompletion {
+  std::uint64_t invocationId;
+  std::atomic_int remaining;
+  InstrDependent dependent;
+  std::shared_ptr<Value> result;
+
+  CallCompletion(std::uint64_t invocationId, int expectedSignals,
+                 InstrDependent dependent);
 };
 
 struct Instruction {

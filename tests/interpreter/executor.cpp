@@ -481,3 +481,43 @@ TEST(startExecution, isolatesBranchedReturnsAcrossConcurrentCallInvocations) {
     actual.push_back(line);
   EXPECT_THAT(actual, testing::UnorderedElementsAreArray(expected));
 }
+
+TEST(startExecution, waitsForTerminalCallSideEffectsAfterDependencyRemapping) {
+  constexpr int callCount = 8;
+  std::string source =
+      "int value = 0;\n"
+      "void printValue() { print value; }\n";
+  std::vector<std::string> expected;
+  for (int i = 0; i < callCount; i++) {
+    source += "printValue();\n";
+    if (i + 1 < callCount)
+      source += "value = value + 1;\n";
+    expected.push_back(std::to_string(i));
+  }
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+  EXPECT_EQ(actual, expected);
+}

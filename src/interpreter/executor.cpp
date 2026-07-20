@@ -110,7 +110,10 @@ getCompletionInstructionIds(std::shared_ptr<Subprogram> program) {
       }
     }
 
-    if (instr.type == InstructionType::Call || !hasInternalDependent)
+    // A nested Call with an internal continuation is not terminal merely
+    // because its body runs asynchronously. Its own completion barrier will
+    // release that continuation when the nested invocation actually ends.
+    if (!hasInternalDependent)
       ids.push_back(i);
   }
 
@@ -162,6 +165,22 @@ void Executor::updateDependency(InstrDependent dep,
 
     for (auto returnDependent : invocation->dependents)
       updateDependency(returnDependent, result);
+    return;
+  }
+
+  if (dep.callCompletion) {
+    auto completion = dep.callCompletion;
+    if (!completion->result && result)
+      completion->result = result;
+
+    int remaining = completion->remaining.fetch_sub(1) - 1;
+    if (cliArgs.verbose)
+      log(LOCATION,
+          "\tCall invocation {} completion barrier has {} signals remaining",
+          completion->invocationId, std::max(remaining, 0));
+
+    if (remaining == 0)
+      updateDependency(completion->dependent, completion->result);
     return;
   }
 
@@ -607,7 +626,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
         std::lock_guard<std::mutex> fulfilledLock(
             depsFulfilledMutexes[dep.instr->id]);
         int fulfilledToReset = 1;
-        if (loopDependency.type == InstructionType::Call && dep.disabled) {
+        if (loopDependency.type == InstructionType::Call && dep.disabled &&
+            !dep.completionBarrierRemapped) {
           auto remaps =
               parseDependencyRemappings(loopDependency.bytecodeArgs).first;
           auto remap = remaps.find(depIndex);
@@ -681,26 +701,31 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto res = parseDependencyRemappings(instr.bytecodeArgs);
     auto remaps = res.first;
+    std::vector<std::pair<InstrDependent, std::vector<int>>>
+        remappedDependencies;
+    // While loops are lowered to an internal _body function whose GoTo reset
+    // protocol still counts remapped resource edges individually.
+    bool usesCompletionBarrier = func->getName() != "_body";
 
     for (auto remap : remaps) {
       auto &dependent = instr.dependents[remap.first];
-      bool directDependencyExists = !dependent.disabled;
+      auto remappedDependent = dependent;
+      remappedDependent.disabled = false;
 
-      for (auto dependencyIndex : remap.second) {
-        auto remappedDependent = dependent;
-        remappedDependent.disabled = false;
-        if (cliArgs.verbose)
-          log(LOCATION, "\tMade {} depend on {}",
-              body->at(dependencyIndex).toString(),
-              dependent.instr->toString());
-        body->at(dependencyIndex).dependents.push_back(remappedDependent);
-      }
+      if (usesCompletionBarrier) {
+        dependent.completionBarrierRemapped = true;
+        remappedDependencies.emplace_back(remappedDependent, remap.second);
+      } else {
+        bool directDependencyExists = !dependent.disabled;
+        for (auto dependencyIndex : remap.second)
+          body->at(dependencyIndex)
+              .dependents.push_back(remappedDependent);
 
-      // The first expansion replaces one direct edge with all remapped edges.
-      if (directDependencyExists) {
-        std::lock_guard<std::mutex> fulfilledLock(
-            depsFulfilledMutexes[dependent.instr->id]);
-        dependent.instr->depCount += remap.second.size() - 1;
+        if (directDependencyExists) {
+          std::lock_guard<std::mutex> fulfilledLock(
+              depsFulfilledMutexes[dependent.instr->id]);
+          dependent.instr->depCount += remap.second.size() - 1;
+        }
       }
 
       if (cliArgs.verbose)
@@ -801,6 +826,40 @@ void Executor::execSingleInstruction(Instruction &instr) {
     }
 
     auto completionIds = getCompletionInstructionIds(body);
+
+    auto attachCompletionBarrier =
+        [&](InstrDependent dependent,
+            const std::unordered_set<int> &signalInstructionIds) {
+          if (signalInstructionIds.empty()) {
+            updateDependency(dependent, result);
+            return;
+          }
+
+          auto completion = std::make_shared<CallCompletion>(
+              callInvocationId,
+              static_cast<int>(signalInstructionIds.size()), dependent);
+          for (auto signalInstructionId : signalInstructionIds) {
+            auto completionSignal = InstrDependent(dependent.instr);
+            completionSignal.callCompletion = completion;
+            body->at(signalInstructionId)
+                .dependents.push_back(completionSignal);
+          }
+
+          if (cliArgs.verbose)
+            log(LOCATION,
+                "Call invocation {} waits for {} resource/terminal signals "
+                "before releasing {}",
+                callInvocationId, signalInstructionIds.size(),
+                dependent.instr->toString());
+        };
+
+    for (auto &[dependent, dependencyIds] : remappedDependencies) {
+      std::unordered_set<int> barrierIds(completionIds.begin(),
+                                         completionIds.end());
+      barrierIds.insert(dependencyIds.begin(), dependencyIds.end());
+      attachCompletionBarrier(dependent, barrierIds);
+    }
+
     for (auto dep : instr.dependents) {
       if (dep.disabled)
         continue;
@@ -812,6 +871,13 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
       if (argDeclarationIds.contains(dep.instr->id)) {
         updateDependency(dep, result);
+        continue;
+      }
+
+      if (dep.callCompletion) {
+        std::unordered_set<int> barrierIds(completionIds.begin(),
+                                           completionIds.end());
+        attachCompletionBarrier(dep, barrierIds);
         continue;
       }
 
