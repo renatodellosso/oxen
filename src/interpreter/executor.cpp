@@ -408,6 +408,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
     std::shared_ptr<Value> left = instr.depArgs[0], right = instr.depArgs[1];
 
     if (left->type == ValueType::Integer && right->type == ValueType::Integer) {
+      if (std::get<int>(right->val) == 0)
+        throw std::runtime_error(
+            std::format("Division by zero on instruction {}", instr.id));
+
       result = std::make_shared<Value>(ValueType::Integer,
                                        std::get<int>(left->val) /
                                            std::get<int>(right->val));

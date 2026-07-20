@@ -205,22 +205,15 @@ ExitCode executeCommand(const CliArgs &args) {
     std::ifstream fileStream(args.target);
     std::string bytecode;
 
-    std::function<std::optional<std::string>(std::string)> writeBytecode =
-        [&bytecode](std::string text) {
-          bytecode = text;
-          return std::nullopt;
-        };
-
-    ExitCode exitCode = compile(args, fileStream, writeBytecode);
+    ExitCode exitCode = compileToBytecode(args, fileStream, bytecode);
     fileStream.close();
     if (exitCode != ExitCode::Ok)
       return exitCode;
 
     std::istringstream bytecodeStream(bytecode);
 
-    Interpreter *interpreter = new Interpreter(args);
-    exitCode = interpreter->interpret(bytecodeStream);
-    delete interpreter;
+    Interpreter interpreter(args);
+    exitCode = interpreter.interpret(bytecodeStream);
 
     return exitCode;
   }

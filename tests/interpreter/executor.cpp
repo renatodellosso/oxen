@@ -1,6 +1,7 @@
 #include "../../src/interpreter/executor.hpp"
 #include "../../src/interpreter/function.hpp"
 #include "../testUtils.hpp"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
 #include <vector>
@@ -111,6 +112,27 @@ TEST(startExecution, populatesDepArgs) {
   EXPECT_EQ(instr->depArgs[1]->type, ValueType::Integer);
   EXPECT_EQ(instr->depArgs[1]->val, instrs[1].bytecodeArgs[0].val);
 
+  REENABLE_COUT
+}
+
+TEST(startExecution, divisionByZeroThrowsRuntimeError) {
+  auto instrs = getCompareInstrs(
+      {.type = ValueType::Integer, .val = 1},
+      {.type = ValueType::Integer, .val = 0}, InstructionType::Divide, false);
+  Subprogram program(std::make_shared<std::vector<Instruction>>(instrs));
+  Executor executor({.threads = 1}, program);
+
+  DISABLE_COUT
+  EXPECT_THROW(
+      {
+        try {
+          executor.startExecution();
+        } catch (const std::runtime_error &error) {
+          EXPECT_THAT(error.what(), testing::HasSubstr("Division by zero"));
+          throw;
+        }
+      },
+      std::runtime_error);
   REENABLE_COUT
 }
 
