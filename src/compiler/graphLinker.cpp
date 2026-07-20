@@ -37,32 +37,13 @@ static void deduplicateDependenciesForSet(BinaryExpression &set,
   }
 }
 
-static int redirectSubexpressionCompletion(Expression &terminal) {
-  int redirected = 0;
-  for (auto subexpression : terminal.getWithSubExpressions()) {
-    auto *completion = &subexpression.get();
-    if (completion->type != InstructionType::GetIdentifier &&
-        completion->type != InstructionType::ReferenceIdentifier)
-      continue;
-
-    // Preserve redirects already owned by another control-flow construct. In
-    // particular, a Print around a Call must not replace the Call's completion
-    // barrier with the Print itself.
-    if (completion->dependentRedirect)
-      continue;
-
-    completion->dependentRedirect = &terminal;
-    redirected++;
-  }
-  return redirected;
-}
-
 static void
 addDependency(Expression &expr, Expression &dependsOn,
-              std::optional<std::string> resourceName = std::nullopt) {
+              std::optional<std::string> resourceName = std::nullopt,
+              bool redirectedToCompletion = false) {
   auto redirect = dependsOn.dependentRedirect;
   if (redirect) {
-    addDependency(expr, *redirect, resourceName);
+    addDependency(expr, *redirect, resourceName, true);
     return;
   }
 
@@ -77,6 +58,14 @@ addDependency(Expression &expr, Expression &dependsOn,
     auto &call = static_cast<UnaryCallExpression &>(dependsOn);
     auto func = call.function.value().get();
 
+    if (redirectedToCompletion) {
+      // The resource was consumed by a call argument. Its next user must wait
+      // for the whole invocation, not for a matching global resource access in
+      // the callee. The executor adds the invocation's terminal signals.
+      call.depRemaps[&expr] = {};
+      return;
+    }
+
     if (!resourceName) {
       if (expr.type != InstructionType::GoTo)
         throw std::runtime_error(std::format(
@@ -87,7 +76,7 @@ addDependency(Expression &expr, Expression &dependsOn,
       // We have a GoTo as part of a while loop
       // Depend on everything right now
 
-      auto &remap = call.depRemaps[call.dependents.size() - 1];
+      auto &remap = call.depRemaps[&expr];
       for (auto &use : func.lastUses) {
         for (auto useExpr : use.second) {
           auto *mappedUse = &useExpr.get();
@@ -117,7 +106,7 @@ addDependency(Expression &expr, Expression &dependsOn,
           "'{}', but the function did not use that resource!",
           expr.toString(), dependsOn.toString(), resourceName.value()));
 
-    call.depRemaps[call.dependents.size() - 1] = lastUses->second;
+    call.depRemaps[&expr] = lastUses->second;
   }
 }
 
@@ -391,7 +380,7 @@ void GraphLinker::processExpression(Expression &expr) {
     } else if (expr.type == InstructionType::BranchMerge) {
       finalizeBranchMerge(expr);
     } else if (expr.type == InstructionType::Print) {
-      int redirected = redirectSubexpressionCompletion(expr);
+      int redirected = expr.redirectResourceCompletionsTo(expr);
       if (cliArgs.verbose)
         log(LOCATION,
             "Redirected {} resource dependency completions to Print {}",

@@ -1255,7 +1255,7 @@ TEST(linkGraph, setsCallDepRemaps) {
 
   ASSERT_EQ(call->getActualCall().depRemaps.size(), 1);
 
-  auto remap = call->getActualCall().depRemaps.find(0);
+  auto remap = call->getActualCall().depRemaps.find(get.get());
   ASSERT_NE(remap, call->getActualCall().depRemaps.end());
 
   ASSERT_EQ(remap->second.size(), 1);

@@ -78,6 +78,24 @@ Expression::getWithSubExpressions() const {
   return vector;
 }
 
+int Expression::redirectResourceCompletionsTo(Expression &terminal) const {
+  int redirected = 0;
+  for (auto subexpression : getWithSubExpressions()) {
+    auto &completion = subexpression.get();
+    if (completion.type != InstructionType::GetIdentifier &&
+        completion.type != InstructionType::ReferenceIdentifier)
+      continue;
+
+    // Preserve redirects already owned by nested side effects or control flow.
+    if (completion.dependentRedirect)
+      continue;
+
+    completion.dependentRedirect = &terminal;
+    redirected++;
+  }
+  return redirected;
+}
+
 std::vector<std::reference_wrapper<Expression>>
 Expression::getCompletionExpressions() const {
   return {*(Expression *)this};
@@ -466,11 +484,23 @@ std::string UnaryCallExpression::toByteCode(CliArgs args) const {
   int subprogramOffset = -function.value().get().id - 1;
 
   // Write dependent remappings
-  bytecode += " " + std::to_string(depRemaps.size());
-  for (auto remap : depRemaps) {
-    bytecode += " " + std::to_string(remap.first) + " " +
-                std::to_string(remap.second.size());
-    for (auto dep : remap.second)
+  std::vector<
+      std::pair<int,
+                const std::vector<std::reference_wrapper<Expression>> *>>
+      emittedRemaps;
+  int dependentIndex = 0;
+  for (const auto &dependent : dependents) {
+    auto remap = depRemaps.find(&dependent.expr.get());
+    if (remap != depRemaps.end())
+      emittedRemaps.emplace_back(dependentIndex, &remap->second);
+    dependentIndex++;
+  }
+
+  bytecode += " " + std::to_string(emittedRemaps.size());
+  for (const auto &[index, remap] : emittedRemaps) {
+    bytecode +=
+        " " + std::to_string(index) + " " + std::to_string(remap->size());
+    for (auto dep : *remap)
       bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
   }
 
@@ -572,10 +602,14 @@ void CallExpression::linkInternally() {
   // must wait for that scope before storing invocation-local parameter values.
   for (int i = 1; i < expressions.size(); i++) {
     auto &argument = expressions[i];
-    auto &declaration =
-        std::static_pointer_cast<BinaryExpression>(argument)->left;
+    auto argumentSet = std::static_pointer_cast<BinaryExpression>(argument);
+    auto &declaration = argumentSet->left;
     addDependency(*declaration.get(), actualCall);
     addDependency(*argument, actualCall);
+
+    // A later write must wait for the invocation that consumes this resource
+    // value, not merely for the argument expression to read it.
+    argumentSet->right->redirectResourceCompletionsTo(actualCall);
   }
 }
 

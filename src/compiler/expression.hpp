@@ -66,6 +66,9 @@ struct Expression {
   // be executed
   virtual std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const;
+  // Route dependencies on resource reads in this expression through a
+  // terminal side effect that consumes those reads.
+  int redirectResourceCompletionsTo(Expression &terminal) const;
   // Returns the expressions that signal that this expression and any nested
   // control flow have finished executing.
   virtual std::vector<std::reference_wrapper<Expression>>
@@ -237,9 +240,11 @@ struct FunctionExpression : public Expression {
 struct CallExpression;
 
 struct UnaryCallExpression : public UnaryExpression {
-  // Dependent remappings - maps dependent index to subprogram IDs that that
-  // dep should depend on instead of this call
-  std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
+  // Dependent remappings map dependent identity to subprogram instructions
+  // that it should wait for instead of this call. Its bytecode index depends
+  // on unordered-set emission order and is resolved during serialization.
+  std::unordered_map<Expression *,
+                     std::vector<std::reference_wrapper<Expression>>>
       depRemaps;
 
   std::optional<std::reference_wrapper<FunctionExpression>> function;

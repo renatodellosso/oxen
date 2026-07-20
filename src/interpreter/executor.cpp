@@ -674,17 +674,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
         std::lock_guard<std::mutex> fulfilledLock(
             depsFulfilledMutexes[dep.instr->id]);
-        int fulfilledToReset = 1;
-        if (loopDependency.type == InstructionType::Call && dep.disabled &&
-            !dep.completionBarrierRemapped) {
-          auto remaps =
-              parseDependencyRemappings(loopDependency.bytecodeArgs).first;
-          auto remap = remaps.find(depIndex);
-          if (remap != remaps.end())
-            fulfilledToReset = remap->second.size();
-        }
         dep.instr->depsFulfilled =
-            std::max(dep.instr->depsFulfilled - fulfilledToReset, 0);
+            std::max(dep.instr->depsFulfilled - 1, 0);
 
         if (dep.instr == &instr && cliArgs.verbose) {
           log(LOCATION, "\tDecremented depsFulfilled from {} to {}",
@@ -752,6 +743,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto res = parseDependencyRemappings(instr.bytecodeArgs);
     auto remaps = res.first;
+    auto remappedDependencyIndices = std::unordered_set<int>();
     std::vector<std::pair<InstrDependent, std::vector<int>>>
         remappedDependencies;
     for (auto remap : remaps) {
@@ -759,15 +751,13 @@ void Executor::execSingleInstruction(Instruction &instr) {
       auto remappedDependent = dependent;
       remappedDependent.disabled = false;
 
-      dependent.completionBarrierRemapped = true;
+      remappedDependencyIndices.insert(remap.first);
       remappedDependencies.emplace_back(remappedDependent, remap.second);
 
       if (cliArgs.verbose)
         log(LOCATION,
-            "Disabling {} dependency since it is now handled by dependency "
-            "remaps",
-            dependent.instr->toString());
-      dependent.disabled = true;
+            "Call invocation {} handles {} through dependency remaps",
+            callInvocationId, dependent.instr->toString());
     }
 
     // Remap arguments
@@ -898,7 +888,11 @@ void Executor::execSingleInstruction(Instruction &instr) {
       attachCompletionBarrier(dependent, barrierIds);
     }
 
-    for (auto dep : instr.dependents) {
+    for (int depIndex = 0; depIndex < instr.dependents.size(); depIndex++) {
+      if (remappedDependencyIndices.contains(depIndex))
+        continue;
+
+      auto dep = instr.dependents[depIndex];
       if (dep.disabled)
         continue;
 

@@ -66,7 +66,6 @@ std::string instructionTypeToString(InstructionType type) {
 
 InstrDependent::InstrDependent(Instruction *instr, std::optional<int> argIndex)
     : instr(instr), argIndex(argIndex), disabled(false),
-      completionBarrierRemapped(false),
       returnInvocation(nullptr), callCompletion(nullptr) {}
 
 InstrDependent::InstrDependent(Instruction *instr, int argIndex)

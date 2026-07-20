@@ -563,6 +563,17 @@ TEST(startExecution, waitsForCallsInsideLoopIterations) {
   for (int i = 0; i < iterations; i++)
     expected.push_back(std::to_string(i));
   EXPECT_EQ(actual, expected);
+
+  int executedCalls = 0;
+  for (const auto &instruction : *program) {
+    if (instruction.type != InstructionType::Call || !instruction.executed)
+      continue;
+
+    executedCalls++;
+    for (const auto &dependent : instruction.dependents)
+      EXPECT_FALSE(dependent.disabled);
+  }
+  EXPECT_GT(executedCalls, 0);
 }
 
 TEST(startExecution, waitsForLeadingSideEffectsBeforeRecursiveCalls) {

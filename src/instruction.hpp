@@ -51,7 +51,6 @@ struct InstrDependent {
   std::optional<int> argIndex;
 
   bool disabled;
-  bool completionBarrierRemapped;
   std::shared_ptr<ReturnInvocation> returnInvocation;
   std::shared_ptr<CallCompletion> callCompletion;
 
