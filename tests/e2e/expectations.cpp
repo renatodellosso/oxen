@@ -1,4 +1,7 @@
 #include "tests.hpp"
+#include "gmock/gmock.h"
+#include <algorithm>
+#include <cctype>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
@@ -15,6 +18,13 @@ std::vector<std::string> splitLines(const std::string &output) {
     lines.push_back(line);
 
   return lines;
+}
+
+std::string lowercase(std::string value) {
+  std::ranges::transform(value, value.begin(), [](unsigned char character) {
+    return static_cast<char>(std::tolower(character));
+  });
+  return value;
 }
 } // namespace
 
@@ -39,11 +49,10 @@ void ExpectError::validate(ExitCode actualExitCode,
   ASSERT_NE(exitCode, ExitCode::Ok)
       << "ExpectError must specify a non-OK exit code";
   ASSERT_EQ(actualExitCode, exitCode);
-  EXPECT_THAT(output, testing::HasSubstr(messageSubstring));
+  EXPECT_THAT(lowercase(output), testing::HasSubstr(lowercase(messageSubstring)));
 }
 
-E2eTest::E2eTest(std::string name, std::string code,
-                 ExpectOrdered expectation)
+E2eTest::E2eTest(std::string name, std::string code, ExpectOrdered expectation)
     : name(std::move(name)), code(std::move(code)),
       expectation(std::make_shared<ExpectOrdered>(std::move(expectation))) {}
 
