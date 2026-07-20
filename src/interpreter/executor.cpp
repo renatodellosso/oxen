@@ -666,6 +666,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto func = std::get<std::shared_ptr<Function>>(instr.depArgs[0]->val);
     auto body = func->getBody().clone();
+    auto callInvocationId = nextCallInvocationId.fetch_add(1);
 
     if (cliArgs.verbose) {
       log(LOCATION, "Calling function '{}' with {} instructions",
@@ -717,6 +718,21 @@ void Executor::execSingleInstruction(Instruction &instr) {
     for (auto remap : remaps) {
       auto &arg = instr.program->at(instr.id + remap.first);
 
+      // Parameter declarations are released by this Call, so their Set
+      // instructions cannot finish before the invocation has been created.
+      // Gate the cloned body on every argument value to ensure conditional
+      // paths cannot read invocation parameters before they are initialized.
+      arg.dependents.emplace_back(&block);
+      {
+        std::lock_guard<std::mutex> fulfilledLock(
+            depsFulfilledMutexes[block.id]);
+        block.depCount++;
+      }
+
+      if (cliArgs.verbose)
+        log(LOCATION, "Call invocation {} gates its body on argument {}",
+            callInvocationId, arg.toString());
+
       for (auto dependentIndex : remap.second) {
         arg.dependents.emplace_back(&body->at(dependentIndex));
         {
@@ -756,7 +772,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
     }
 
     auto returnInvocation = std::make_shared<ReturnInvocation>(
-        nextCallInvocationId.fetch_add(1), std::move(returnDependents));
+        callInvocationId, std::move(returnDependents));
     if (cliArgs.verbose)
       log(LOCATION, "Created call invocation {} with {} return dependents",
           returnInvocation->id, returnInvocation->dependents.size());
