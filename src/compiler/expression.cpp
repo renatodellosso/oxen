@@ -78,6 +78,11 @@ Expression::getWithSubExpressions() const {
   return vector;
 }
 
+std::vector<std::reference_wrapper<Expression>>
+Expression::getCompletionExpressions() const {
+  return {*(Expression *)this};
+}
+
 void Expression::linkInternally() { return; }
 
 int Expression::numberExpressions(int startWith) {
@@ -225,6 +230,23 @@ BlockExpression::getWithSubExpressions() const {
   return vector;
 }
 
+std::vector<std::reference_wrapper<Expression>>
+BlockExpression::getCompletionExpressions() const {
+  if (completionExpression)
+    return {*completionExpression};
+
+  if (expressions.empty())
+    return Expression::getCompletionExpressions();
+
+  std::vector<std::reference_wrapper<Expression>> completions;
+  for (const auto &expr : expressions) {
+    auto exprCompletions = expr->getCompletionExpressions();
+    std::move(exprCompletions.begin(), exprCompletions.end(),
+              std::back_inserter(completions));
+  }
+  return completions;
+}
+
 int BlockExpression::numberExpressions(int startWith) {
   startWith = Expression::numberExpressions(startWith);
 
@@ -304,12 +326,17 @@ IfExpression::getWithSubExpressions() const {
   return vector;
 }
 
+std::vector<std::reference_wrapper<Expression>>
+IfExpression::getCompletionExpressions() const {
+  return {*mergeInstruction};
+}
+
 void IfExpression::linkInternally() {
   addDependency(*this, *root, 0);
 
-  auto thenExprs = thenBlock->getWithSubExpressions();
+  auto thenCompletions = thenBlock->getCompletionExpressions();
   addDependency(*mergeInstruction, *this);
-  for (auto expr : thenExprs)
+  for (auto expr : thenCompletions)
     addDependency(*mergeInstruction, expr.get());
 
   if (!elseBlock)
@@ -317,13 +344,13 @@ void IfExpression::linkInternally() {
 
   addDependency(*elseInstruction, *this, 0);
 
-  for (auto expr : thenExprs)
+  for (auto expr : thenCompletions)
     addDependency(*elseInstruction, expr.get());
 
   addDependency(*mergeInstruction, *elseInstruction);
 
-  auto elseExprs = elseBlock->getWithSubExpressions();
-  for (auto expr : elseExprs)
+  auto elseCompletions = elseBlock->getCompletionExpressions();
+  for (auto expr : elseCompletions)
     addDependency(*mergeInstruction, expr.get());
 }
 

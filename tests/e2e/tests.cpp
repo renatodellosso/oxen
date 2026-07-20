@@ -195,6 +195,28 @@ std::vector<E2eTest> tests = {
      "if (false) print \"wrong\"; else { while (i < 2) i = i + 1; }\n"
      "print i;",
      ExpectUnordered({"2"})},
+    {"ThenBlocksCanContainLoops",
+     "int i = 0;\n"
+     "if (true) { while (i < 2) i = i + 1; } else print \"wrong\";\n"
+     "print i;",
+     ExpectUnordered({"2"})},
+    {"BranchLoopsCanRunZeroIterations",
+     "int i = 0;\n"
+     "if (false) print \"wrong\"; else { while (false) i = i + 1; }\n"
+     "print i;",
+     ExpectUnordered({"0"})},
+    {"NestedBlocksPropagateLoopCompletion",
+     "int i = 0;\n"
+     "if (false) print \"wrong\"; else { { while (i < 2) i = i + 1; } }\n"
+     "print i;",
+     ExpectUnordered({"2"})},
+    {"NestedIfsPropagateLoopCompletion",
+     "int i = 0;\n"
+     "if (false) print \"wrong\"; else {\n"
+     "if (true) { while (i < 2) i = i + 1; }\n"
+     "}\n"
+     "print i;",
+     ExpectUnordered({"2"})},
 
     // While loops
     {"WhileLoopsRunWhileConditionIsTrue",

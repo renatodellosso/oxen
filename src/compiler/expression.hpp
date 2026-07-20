@@ -66,6 +66,10 @@ struct Expression {
   // be executed
   virtual std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const;
+  // Returns the expressions that signal that this expression and any nested
+  // control flow have finished executing.
+  virtual std::vector<std::reference_wrapper<Expression>>
+  getCompletionExpressions() const;
   // Link any internal expressions with each other (e.g. a binary expressions
   // depends on its left and right subexpressions)
   virtual void linkInternally();
@@ -117,6 +121,8 @@ struct IfExpression : public UnaryExpression {
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
+  std::vector<std::reference_wrapper<Expression>>
+  getCompletionExpressions() const override;
   void linkInternally() override;
   int numberExpressions(int startWith) override;
   int countInstructions() const override;
@@ -143,13 +149,15 @@ struct BinaryExpression : public Expression {
 // more complicated than just adding deps for The block's expressions
 struct BlockExpression : public Expression {
   std::vector<std::shared_ptr<Expression>> expressions;
+  // Synthetic control-flow blocks can provide a stable completion signal.
+  std::shared_ptr<Expression> completionExpression;
 
   BlockExpression()
       : BlockExpression(std::vector<std::shared_ptr<Expression>>(), 0) {}
   BlockExpression(std::vector<std::shared_ptr<Expression>> expressions,
                   int lineNumber)
       : Expression(InstructionType::Block, lineNumber),
-        expressions(std::move(expressions)) {}
+        expressions(std::move(expressions)), completionExpression(nullptr) {}
   BlockExpression(int lineNumber)
       : BlockExpression(std::vector<std::shared_ptr<Expression>>(),
                         lineNumber) {}
@@ -160,6 +168,8 @@ struct BlockExpression : public Expression {
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
+  std::vector<std::reference_wrapper<Expression>>
+  getCompletionExpressions() const override;
   int numberExpressions(int startWith) override;
   int countInstructions() const override;
 };

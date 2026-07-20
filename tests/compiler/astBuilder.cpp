@@ -396,6 +396,7 @@ TEST(AstBuilder, buildsWhileStatements) {
   EXPECT_EQ(outerBlock->expressions.at(0)->type, InstructionType::Function);
   auto whileStatement = outerBlock->expressions.at(1);
   EXPECT_EQ(whileStatement->type, InstructionType::While);
+  EXPECT_EQ(outerBlock->completionExpression, whileStatement);
 
   auto block = std::dynamic_pointer_cast<BlockExpression>(
       outerBlock->expressions.at(2));
@@ -418,6 +419,42 @@ TEST(AstBuilder, buildsWhileStatements) {
   ASSERT_NE(whileExpression, nullptr);
   EXPECT_EQ(goTo->id + std::atoi(goTo->token.raw.c_str()),
             whileExpression->root->id);
+}
+
+TEST(AstBuilder, lowersWhileStatementsInsideNestedBlocks) {
+  std::vector<Token> tokens = {
+      {TokenType::LeftBrace, TokenSubtype::None, "{", 1},
+      {TokenType::LeftBrace, TokenSubtype::None, "{", 1},
+      {TokenType::While, TokenSubtype::None, "while", 1},
+      {TokenType::LeftParen, TokenSubtype::None, "(", 1},
+      {TokenType::Literal, TokenSubtype::Bool, "true", 1},
+      {TokenType::RightParen, TokenSubtype::None, ")", 1},
+      {TokenType::Literal, TokenSubtype::Integer, "1", 1},
+      {TokenType::Semicolon, TokenSubtype::None, ";", 1},
+      {TokenType::RightBrace, TokenSubtype::None, "}", 1},
+      {TokenType::RightBrace, TokenSubtype::None, "}", 1},
+  };
+
+  AstBuilder builder(std::make_unique<std::vector<Token>>(tokens));
+  builder.build();
+
+  ASSERT_TRUE(builder.getErrors()->empty());
+  ASSERT_EQ(builder.getExpressions()->size(), 1);
+  auto outerBlock = std::dynamic_pointer_cast<BlockExpression>(
+      builder.getExpressions()->at(0));
+  ASSERT_NE(outerBlock, nullptr);
+  ASSERT_EQ(outerBlock->expressions.size(), 1);
+  auto innerBlock = std::dynamic_pointer_cast<BlockExpression>(
+      outerBlock->expressions.at(0));
+  ASSERT_NE(innerBlock, nullptr);
+  ASSERT_EQ(innerBlock->expressions.size(), 1);
+  auto loweredLoop = std::dynamic_pointer_cast<BlockExpression>(
+      innerBlock->expressions.at(0));
+  ASSERT_NE(loweredLoop, nullptr);
+  ASSERT_EQ(loweredLoop->expressions.size(), 3);
+  EXPECT_EQ(loweredLoop->completionExpression,
+            loweredLoop->expressions.at(1));
+  EXPECT_EQ(loweredLoop->completionExpression->type, InstructionType::While);
 }
 
 TEST(AstBuilder, buildsFunctionsWithoutParameters) {

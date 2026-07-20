@@ -454,12 +454,11 @@ void AstBuilder::postProcessWhileLoop(
   // Add goto
   Token jumpToken = {TokenType::Literal, TokenSubtype::Integer,
                      std::to_string(-1), loop->lineNumber};
+  auto whileInstruction = std::make_shared<UnaryExpression>(
+      *static_cast<UnaryExpression *>(loop.get()));
   auto jump = std::make_shared<RootExpression>(
       RootExpression(InstructionType::GoTo, loop->lineNumber, jumpToken));
-  jump->dependentRedirect = loop.get();
-
-  auto origLoop = std::make_shared<UnaryExpression>(
-      *static_cast<UnaryExpression *>(loop.get()));
+  jump->dependentRedirect = whileInstruction.get();
 
   // Make function
   auto func =
@@ -483,10 +482,10 @@ void AstBuilder::postProcessWhileLoop(
 
   // Make outer block
   auto block = std::make_unique<BlockExpression>(loop->lineNumber);
+  block->completionExpression = whileInstruction;
   block->expressions.push_back(std::move(func));
   block->expressions.push_back(body); // func->body will be set in postProcess
-  block->expressions.push_back(std::make_shared<UnaryExpression>(
-      *static_cast<UnaryExpression *>(loop.get())));
+  block->expressions.push_back(std::move(whileInstruction));
   block->expressions.push_back(std::move(innerBlock));
 
   // Replace the expression at loop with block
@@ -515,6 +514,12 @@ void AstBuilder::postProcess(
       postProcess(&ifExpr->thenBlock->expressions);
       if (ifExpr->elseBlock)
         postProcess(&ifExpr->elseBlock->expressions);
+      continue;
+    }
+
+    auto blockExpr = dynamic_cast<BlockExpression *>(&expr);
+    if (blockExpr) {
+      postProcess(&blockExpr->expressions);
       continue;
     }
 
