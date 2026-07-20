@@ -49,7 +49,8 @@ void ExpectError::validate(ExitCode actualExitCode,
   ASSERT_NE(exitCode, ExitCode::Ok)
       << "ExpectError must specify a non-OK exit code";
   ASSERT_EQ(actualExitCode, exitCode);
-  EXPECT_THAT(lowercase(output), testing::HasSubstr(lowercase(messageSubstring)));
+  EXPECT_THAT(lowercase(output),
+              testing::HasSubstr(lowercase(messageSubstring)));
 }
 
 E2eTest::E2eTest(std::string name, std::string code, ExpectOrdered expectation)
