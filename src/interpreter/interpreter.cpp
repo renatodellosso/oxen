@@ -1,58 +1,24 @@
 #include "interpreter.hpp"
-#include "../color.hpp"
 #include "../logging.hpp"
+#include "../programExecution.hpp"
 #include "../utils.hpp"
-#include "bytecodeParser.hpp"
-#include "executor.hpp"
-#include "subprogram.hpp"
 #include <chrono>
-#include <memory>
-#include <unordered_map>
-#include <vector>
 
 #define LOCATION "Interpreter"
 
-Interpreter::Interpreter(const CliArgs &args)
-    : args(args), instructions(std::vector<Instruction>()) {}
+Interpreter::Interpreter(const CliArgs &args) : args(args) {}
 
-ExitCode Interpreter::interpret(std::istream &stream) {
+ExitCode Interpreter::interpret(std::istream &stream, ExecutionStats *stats) {
   auto start = std::chrono::steady_clock::now();
 
   if (args.verbose)
     log(LOCATION, "Interpreting file '{}'...", args.target);
 
-  try {
-    BytecodeParser *parser = new BytecodeParser(args, instructions, stream);
-    parser->buildInstructions();
-
-    delete parser; // match new with delete
-  } catch (std::runtime_error err) {
-    logError(LOCATION, "{}",
-             colorize(std::format("Encountered error parsing bytecode: {}",
-                                  err.what()),
-                      Color::Red));
-    return ExitCode::BytecodeParseError;
-  }
-
-  try {
-    auto instrs = std::make_shared<std::vector<Instruction>>(instructions);
-    auto program = std::make_shared<Subprogram>(instrs);
-    program->setSubprogramPointers(program);
-
-    Executor *executor = new Executor(args, *program.get());
-    executor->startExecution();
-
-    delete executor;
-  } catch (std::runtime_error err) {
-    logError(LOCATION, "{}",
-             colorize(std::format("Encountered error executing bytecode: {}",
-                                  err.what()),
-                      Color::Red));
-    return ExitCode::ExecutionError;
-  }
+  ExitCode exitCode = executeBytecode(args, stream, stats);
+  if (exitCode != ExitCode::Ok)
+    return exitCode;
 
   auto end = std::chrono::steady_clock::now();
-  auto duration = end - start;
 
   if (args.verbose)
     log(LOCATION, "Finished in {}", formatNs(end - start));

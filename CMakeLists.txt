@@ -25,6 +25,8 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM sources ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS tests/*.cpp)
 file(GLOB_RECURSE benchmark_sources CONFIGURE_DEPENDS benchmark/*.cpp)
+list(REMOVE_ITEM benchmark_sources
+  ${CMAKE_CURRENT_SOURCE_DIR}/benchmark/main.cpp)
 
 target_sources(CLI
   PRIVATE
@@ -36,12 +38,14 @@ target_sources(Tests
   PRIVATE
     ${sources}
     ${test_sources}
+    ${benchmark_sources}
 )
 
 target_sources(Benchmark
   PRIVATE
     ${sources}
     ${benchmark_sources}
+    benchmark/main.cpp
 )
 
 target_link_libraries(Tests PRIVATE GTest::gtest_main gmock_main)

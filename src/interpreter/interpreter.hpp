@@ -2,15 +2,14 @@
 
 #include "../cliUtils.hpp"
 #include "../exitCode.hpp"
-#include "../instruction.hpp"
-#include <fstream>
-#include <vector>
+#include <istream>
+
+struct ExecutionStats;
 
 class Interpreter {
   const CliArgs &args;
-  std::vector<Instruction> instructions;
 
 public:
   Interpreter(const CliArgs &args);
-  ExitCode interpret(std::istream &stream);
+  ExitCode interpret(std::istream &stream, ExecutionStats *stats = nullptr);
 };
