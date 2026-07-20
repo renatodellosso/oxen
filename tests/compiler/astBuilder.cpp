@@ -385,28 +385,39 @@ TEST(AstBuilder, buildsWhileStatements) {
   builder.build();
 
   EXPECT_EQ(builder.getErrors().get()->size(), 0);
-  ASSERT_EQ(builder.getExpressions().get()->size(), 2);
-  EXPECT_EQ(builder.getExpressions().get()->at(0)->type,
-            InstructionType::While);
+  ASSERT_EQ(builder.getExpressions().get()->size(), 1);
 
   auto expressions = builder.getExpressions();
+  auto outerBlock =
+      std::dynamic_pointer_cast<BlockExpression>(expressions->at(0));
+  ASSERT_NE(outerBlock, nullptr);
+  ASSERT_EQ(outerBlock->expressions.size(), 3);
+
+  EXPECT_EQ(outerBlock->expressions.at(0)->type, InstructionType::Function);
+  auto whileStatement = outerBlock->expressions.at(1);
+  EXPECT_EQ(whileStatement->type, InstructionType::While);
+
+  auto block = std::dynamic_pointer_cast<BlockExpression>(
+      outerBlock->expressions.at(2));
+  ASSERT_NE(block, nullptr);
+  ASSERT_EQ(block->expressions.size(), 2);
+  EXPECT_NE(std::dynamic_pointer_cast<CallExpression>(block->expressions.at(0)),
+            nullptr);
+
   int startWith = 0;
   for (auto expr : *expressions) {
     startWith = expr->numberExpressions(startWith);
   }
 
-  auto block = std::dynamic_pointer_cast<BlockExpression>(expressions->at(1));
-  ASSERT_NE(block, nullptr);
-  ASSERT_EQ(block->expressions.size(), 2);
-
   auto goTo =
       std::dynamic_pointer_cast<RootExpression>(block->expressions.at(1));
   ASSERT_NE(goTo, nullptr);
-
-  auto whileStatement = expressions->at(0);
-  EXPECT_EQ(whileStatement->type, InstructionType::While);
-
-  EXPECT_EQ(goTo->id + std::atoi(goTo->token.raw.c_str()), 0);
+  EXPECT_EQ(goTo->type, InstructionType::GoTo);
+  auto whileExpression =
+      std::dynamic_pointer_cast<UnaryExpression>(whileStatement);
+  ASSERT_NE(whileExpression, nullptr);
+  EXPECT_EQ(goTo->id + std::atoi(goTo->token.raw.c_str()),
+            whileExpression->root->id);
 }
 
 TEST(AstBuilder, buildsFunctionsWithoutParameters) {

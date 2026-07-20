@@ -524,7 +524,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
       // Remember to use lock when clearing depArgs, since other threads may be
       // reading them!
       {
-        std::lock_guard<std::mutex> argLock(depArgsMutexes[instr.id]);
+        std::lock_guard<std::mutex> argLock(depArgsMutexes[i]);
         instr.program->at(i).depArgs.clear();
       }
 
@@ -534,11 +534,14 @@ void Executor::execSingleInstruction(Instruction &instr) {
             instr.program->at(i).toString());
       }
 
-      for (auto dep : instr.program->at(i).dependents) {
+      auto &loopDependency = instr.program->at(i);
+      for (int depIndex = 0; depIndex < loopDependency.dependents.size();
+           depIndex++) {
+        auto dep = loopDependency.dependents[depIndex];
         if (dep.instr->program != instr.program || dep.instr->id <= returnTo ||
             dep.instr->id > instr.id ||
             (dep.disabled &&
-             instr.program->at(i).type != InstructionType::Call &&
+             loopDependency.type != InstructionType::Call &&
              dep.instr != &instr)) {
 
           std::string reason = dep.instr->program != instr.program
@@ -558,7 +561,16 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
         std::lock_guard<std::mutex> fulfilledLock(
             depsFulfilledMutexes[dep.instr->id]);
-        dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
+        int fulfilledToReset = 1;
+        if (loopDependency.type == InstructionType::Call && dep.disabled) {
+          auto remaps =
+              parseDependencyRemappings(loopDependency.bytecodeArgs).first;
+          auto remap = remaps.find(depIndex);
+          if (remap != remaps.end())
+            fulfilledToReset = remap->second.size();
+        }
+        dep.instr->depsFulfilled =
+            std::max(dep.instr->depsFulfilled - fulfilledToReset, 0);
 
         if (dep.instr == &instr && cliArgs.verbose) {
           log(LOCATION, "\tDecremented depsFulfilled from {} to {}",
@@ -626,19 +638,20 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     for (auto remap : remaps) {
       auto &dependent = instr.dependents[remap.first];
-      dependent.disabled =
-          false; // Re-enable dependent since we might've previously disabled it
+      bool directDependencyExists = !dependent.disabled;
 
       for (auto dependencyIndex : remap.second) {
+        auto remappedDependent = dependent;
+        remappedDependent.disabled = false;
         if (cliArgs.verbose)
           log(LOCATION, "\tMade {} depend on {}",
               body->at(dependencyIndex).toString(),
               dependent.instr->toString());
-        body->at(dependencyIndex).dependents.push_back(dependent);
+        body->at(dependencyIndex).dependents.push_back(remappedDependent);
       }
 
-      // Adjust depCount accordingly
-      {
+      // The first expansion replaces one direct edge with all remapped edges.
+      if (directDependencyExists) {
         std::lock_guard<std::mutex> fulfilledLock(
             depsFulfilledMutexes[dependent.instr->id]);
         dependent.instr->depCount += remap.second.size() - 1;

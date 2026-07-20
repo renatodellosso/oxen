@@ -67,8 +67,24 @@ addDependency(Expression &expr, Expression &dependsOn,
       // We have a GoTo as part of a while loop
       // Depend on everything right now
 
+      auto &remap = call.depRemaps[call.dependents.size() - 1];
       for (auto &use : func.lastUses) {
-        call.depRemaps[call.dependents.size() - 1] = use.second;
+        for (auto useExpr : use.second) {
+          auto *mappedUse = &useExpr.get();
+          while (mappedUse->dependentRedirect)
+            mappedUse = mappedUse->dependentRedirect;
+
+          bool alreadyMapped = false;
+          for (auto mappedExpr : remap) {
+            if (&mappedExpr.get() == mappedUse) {
+              alreadyMapped = true;
+              break;
+            }
+          }
+
+          if (!alreadyMapped)
+            remap.push_back(*mappedUse);
+        }
       }
 
       return;

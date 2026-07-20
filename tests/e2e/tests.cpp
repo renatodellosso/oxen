@@ -183,6 +183,21 @@ std::vector<E2eTest> tests = {
         "print sum;",
         {"9"},
     },
+    {
+        "NestedLoopsRunInnerLoopForEachOuterIteration",
+        "int count = 0;\n"
+        "int i = 0;\n"
+        "while (i < 3) {\n"
+        "int j = 0;\n"
+        "while (j < 2) {\n"
+        "count = count + 1;\n"
+        "j = j + 1;\n"
+        "}\n"
+        "i = i + 1;\n"
+        "}\n"
+        "print count;",
+        {"6"},
+    },
     {"WhileLoopsCanBeDoublyNestedAndCountIterationsCorrectly",
      "int sum = 0;\n"
      "int i = 0;\n"
