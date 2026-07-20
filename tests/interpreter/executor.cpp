@@ -432,3 +432,74 @@ TEST(startExecution, remapsReturnsAfterCallDirectDependencyIsDisabled) {
 
   EXPECT_EQ(output, "true\n");
 }
+
+TEST(startExecution, isolatesReturnStateAcrossConcurrentCallInvocations) {
+  constexpr int invocationCount = 3;
+  constexpr int consumersPerInvocation = 2;
+  auto instrs = std::make_shared<std::vector<Instruction>>();
+  for (int i = 0; i < 4 + invocationCount * 4; i++)
+    instrs->emplace_back(i);
+
+  auto &function = instrs->at(0);
+  function.type = InstructionType::Function;
+  function.bytecodeArgs = {{ValueType::Identifier, "string"},
+                           {ValueType::Identifier, "constant"}};
+  function.dependents.emplace_back(&instrs->at(1));
+
+  auto &body = instrs->at(1);
+  body.type = InstructionType::Block;
+  body.depCount = 1;
+  body.bytecodeArgs = {{ValueType::Integer, 2}, {ValueType::Integer, 0}};
+  body.dependents.emplace_back(&instrs->at(2));
+
+  auto &literal = instrs->at(2);
+  literal.type = InstructionType::GetLiteral;
+  literal.depCount = 1;
+  literal.bytecodeArgs = {{ValueType::String, "inner"}};
+  literal.dependents.emplace_back(&instrs->at(3), 0);
+
+  auto &returnInstruction = instrs->at(3);
+  returnInstruction.type = InstructionType::Return;
+  returnInstruction.depCount = 1;
+
+  for (int invocation = 0; invocation < invocationCount; invocation++) {
+    int getFunctionId = 4 + invocation * 4;
+    auto &getFunction = instrs->at(getFunctionId);
+    getFunction.type = InstructionType::GetIdentifier;
+    getFunction.depCount = 1;
+    getFunction.bytecodeArgs = {{ValueType::Identifier, "constant"}};
+    getFunction.dependents.emplace_back(&instrs->at(getFunctionId + 1), 0);
+    function.dependents.emplace_back(&getFunction);
+
+    auto &call = instrs->at(getFunctionId + 1);
+    call.type = InstructionType::Call;
+    call.depCount = 1;
+    call.bytecodeArgs = {
+        {ValueType::Integer, 0}, // Dependency remappings
+        {ValueType::Integer, 0}, // Argument remappings
+        {ValueType::Integer, 0}, // Argument declarations
+        {ValueType::Integer, 1}, // Return instructions
+        {ValueType::Integer, 2}, // Return instruction ID in the function body
+    };
+
+    for (int consumer = 0; consumer < consumersPerInvocation; consumer++) {
+      auto &print = instrs->at(getFunctionId + 2 + consumer);
+      print.type = InstructionType::Print;
+      print.depCount = 1;
+      call.dependents.emplace_back(&print, 0);
+      // A call edge may already be disabled by an enclosing block remap. It is
+      // still the template for this invocation's return consumers.
+      call.dependents.back().disabled = true;
+    }
+  }
+
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor({.threads = 16}, *program);
+
+  DISABLE_COUT
+  executor.startExecution();
+  auto output = REENABLE_COUT
+
+  EXPECT_EQ(output, "inner\ninner\ninner\ninner\ninner\ninner\n");
+}

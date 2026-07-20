@@ -142,10 +142,30 @@ void Executor::updateDependency(InstrDependent dep,
   std::lock_guard<std::recursive_mutex> dependencyStateLock(
       dependencyStateMutex);
 
-  if (dep.disabled || dep.instr->skipped)
+  if (dep.disabled)
     return;
 
-  if (dep.returnLatch && dep.returnLatch->exchange(true))
+  if (dep.returnInvocation) {
+    auto invocation = dep.returnInvocation;
+    if (invocation->claimed.exchange(true)) {
+      if (cliArgs.verbose)
+        log(LOCATION, "\tCall invocation {} ignored a later return value {}",
+            invocation->id, result ? valToStr(*result) : "none");
+      return;
+    }
+
+    if (cliArgs.verbose)
+      log(LOCATION,
+          "\tCall invocation {} selected return value {} for {} dependents",
+          invocation->id, result ? valToStr(*result) : "none",
+          invocation->dependents.size());
+
+    for (auto returnDependent : invocation->dependents)
+      updateDependency(returnDependent, result);
+    return;
+  }
+
+  if (dep.instr->skipped)
     return;
 
   // Don't re-set dep args
@@ -725,25 +745,31 @@ void Executor::execSingleInstruction(Instruction &instr) {
         parseReturnIdsFromBytecodeArgs(instr.bytecodeArgs, argDecRes.second);
     auto returnIds = returnIdsRes.first;
 
-    auto returnLatch = std::make_shared<std::atomic_bool>(false);
-    for (auto &dep : instr.dependents) {
+    std::vector<InstrDependent> returnDependents;
+    for (const auto &dep : instr.dependents) {
       if (!dep.argIndex)
         continue;
 
+      auto returnDependent = dep;
+      returnDependent.disabled = false;
+      returnDependents.push_back(returnDependent);
+    }
+
+    auto returnInvocation = std::make_shared<ReturnInvocation>(
+        nextCallInvocationId.fetch_add(1), std::move(returnDependents));
+    if (cliArgs.verbose)
+      log(LOCATION, "Created call invocation {} with {} return dependents",
+          returnInvocation->id, returnInvocation->dependents.size());
+
+    if (!returnInvocation->dependents.empty()) {
       for (auto returnId : returnIds) {
-        // The direct edge stays disabled after the first invocation, but each
-        // invocation still needs an enabled edge from its cloned return.
-        auto returnDep = dep;
-        returnDep.disabled = false;
-        returnDep.returnLatch = returnLatch;
+        // Keep an argument index on the marker edge so skipping an untaken
+        // Return does not publish a null result for the invocation.
+        auto returnDep =
+            InstrDependent(returnInvocation->dependents.front().instr, 0);
+        returnDep.returnInvocation = returnInvocation;
         body->at(returnId).dependents.push_back(returnDep);
       }
-
-      if (cliArgs.verbose)
-        log(LOCATION,
-            "Disabling {} dependency since it is now handled by returns",
-            dep.instr->toString());
-      dep.disabled = true;
     }
 
     for (int i = 1; i < returnIds.size(); i++) {
@@ -763,8 +789,12 @@ void Executor::execSingleInstruction(Instruction &instr) {
       if (dep.disabled)
         continue;
 
-      if (dep.argIndex.has_value() ||
-          argDeclarationIds.contains(dep.instr->id)) {
+      // Argument-indexed dependents receive the selected return through the
+      // invocation-local ReturnInvocation above.
+      if (dep.argIndex.has_value())
+        continue;
+
+      if (argDeclarationIds.contains(dep.instr->id)) {
         updateDependency(dep, result);
         continue;
       }
@@ -938,7 +968,7 @@ void Executor::startExecution() {
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
                    ExecutionStats *stats)
     : cliArgs(cliArgs), program(program), stats(stats),
-      pendingTasks(0),
+      pendingTasks(0), nextCallInvocationId(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
       halt(false), failed(false), haltCause("Unknown") {

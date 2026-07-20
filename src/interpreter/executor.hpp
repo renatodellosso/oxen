@@ -24,6 +24,7 @@ class Executor {
   ConcurrentQueue<std::reference_wrapper<Instruction>> queue;
   std::vector<std::thread> workers;
   std::atomic_int pendingTasks;
+  std::atomic_uint64_t nextCallInvocationId;
 
   // We have to put the mutexes in here since we can't move them
   std::vector<std::mutex> depArgsMutexes, depsFulfilledMutexes;
