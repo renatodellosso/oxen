@@ -105,6 +105,22 @@ TEST_P(E2EFixture, E2E) {
   EXPECT_THAT(splitOut, testing::UnorderedElementsAreArray(test.output));
 }
 
+TEST(E2EErrors, DivisionByZeroReportsRuntimeError) {
+  std::filesystem::create_directory(folder);
+  const std::string fileName = folder + "/DivisionByZero.p";
+  std::ofstream(fileName) << "print 1 / 0;";
+  CliArgs args = {.target = fileName,
+                  .mode = CliMode::CompileAndInterpret,
+                  .threads = 1};
+
+  DISABLE_COUT
+  EXPECT_EQ(executeCommand(args), ExitCode::ExecutionError);
+  auto output = REENABLE_COUT;
+  std::filesystem::remove(fileName);
+
+  EXPECT_THAT(output, testing::HasSubstr("Division by zero"));
+}
+
 INSTANTIATE_TEST_SUITE_P(
     E2E, E2EFixture,
     testing::Combine(testing::ValuesIn(tests.begin(), tests.end()),
