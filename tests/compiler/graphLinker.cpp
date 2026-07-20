@@ -581,6 +581,49 @@ TEST(linkGraph, linksPrintStatementsWithVariables) {
   delete linker;
 }
 
+TEST(linkGraph, writesWaitForPriorPrintSideEffects) {
+  auto type = std::make_shared<RootExpression>(
+      RootExpression(InstructionType::GetIdentifier, 0,
+                     {TokenType::Identifier, TokenSubtype::None, "int", 1}));
+  auto name = std::make_shared<RootExpression>(
+      RootExpression(InstructionType::GetLiteral, 0,
+                     {TokenType::Identifier, TokenSubtype::None, "var", 1}));
+  auto declaration = std::make_shared<BinaryExpression>(
+      BinaryExpression(InstructionType::Declare, 0, type, name));
+  auto initialValue = std::make_shared<RootExpression>(
+      RootExpression(InstructionType::GetLiteral, 1,
+                     {TokenType::Literal, TokenSubtype::Integer, "1", 1}));
+  auto initialSet = std::make_shared<BinaryExpression>(
+      BinaryExpression(InstructionType::Set, 1, declaration, initialValue));
+
+  auto read = std::make_shared<RootExpression>(
+      RootExpression(InstructionType::GetIdentifier, 2,
+                     {TokenType::Identifier, TokenSubtype::None, "var", 2}));
+  auto print = std::make_shared<UnaryExpression>(
+      UnaryExpression(InstructionType::Print, 2, read));
+
+  auto reference = std::make_shared<RootExpression>(RootExpression(
+      InstructionType::ReferenceIdentifier, 3,
+      {TokenType::Identifier, TokenSubtype::None, "var", 3}));
+  auto nextValue = std::make_shared<RootExpression>(
+      RootExpression(InstructionType::GetLiteral, 3,
+                     {TokenType::Literal, TokenSubtype::Integer, "2", 3}));
+  auto nextSet = std::make_shared<BinaryExpression>(
+      BinaryExpression(InstructionType::Set, 3, reference, nextValue));
+
+  auto expressions =
+      std::make_shared<std::vector<std::shared_ptr<Expression>>>();
+  expressions->insert(expressions->end(), {initialSet, print, nextSet});
+  numberExpressions(expressions);
+
+  GraphLinker linker(expressions);
+  ASSERT_NO_THROW(linker.linkGraph());
+  ASSERT_TRUE(linker.getErrors()->empty());
+
+  EXPECT_TRUE(dependsOn(nextSet, print));
+  EXPECT_FALSE(dependsOn(nextSet, read));
+}
+
 TEST(linkGraph, linksFunctionsInternally) {
   auto type = std::make_shared<RootExpression>(
       RootExpression(InstructionType::GetIdentifier, 0,
@@ -1212,7 +1255,7 @@ TEST(linkGraph, setsCallDepRemaps) {
 
   ASSERT_EQ(call->getActualCall().depRemaps.size(), 1);
 
-  auto remap = call->getActualCall().depRemaps.find(0);
+  auto remap = call->getActualCall().depRemaps.find(get.get());
   ASSERT_NE(remap, call->getActualCall().depRemaps.end());
 
   ASSERT_EQ(remap->second.size(), 1);

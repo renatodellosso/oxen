@@ -123,6 +123,36 @@ TEST(Tokenizer, identifiesStrings) {
   delete tokenizer;
 }
 
+TEST(Tokenizer, identifiesEmptyStrings) {
+  std::string text("\"\"");
+
+  std::istringstream stream(text);
+  Tokenizer tokenizer(stream);
+
+  tokenizer.parse();
+  auto tokens = tokenizer.close();
+
+  ASSERT_EQ(tokens->size(), 1);
+  EXPECT_EQ(tokens->at(0).type, TokenType::Literal);
+  EXPECT_EQ(tokens->at(0).subtype, TokenSubtype::String);
+  EXPECT_EQ(tokens->at(0).raw, text);
+}
+
+TEST(Tokenizer, doesNotConsumeTokensAfterEmptyStrings) {
+  std::istringstream stream("\"\")");
+  Tokenizer tokenizer(stream);
+
+  tokenizer.parse();
+  auto tokens = tokenizer.close();
+
+  ASSERT_EQ(tokens->size(), 2);
+  EXPECT_EQ(tokens->at(0).type, TokenType::Literal);
+  EXPECT_EQ(tokens->at(0).subtype, TokenSubtype::String);
+  EXPECT_EQ(tokens->at(0).raw, "\"\"");
+  EXPECT_EQ(tokens->at(1).type, TokenType::RightParen);
+  EXPECT_EQ(tokens->at(1).raw, ")");
+}
+
 TEST(Tokenizer, identifiesStringsMixedWithOtherTypes) {
   std::string text(";\"abc\",");
 

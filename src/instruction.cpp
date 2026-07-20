@@ -3,6 +3,7 @@
 #include <format>
 #include <memory>
 #include <string>
+#include <utility>
 
 std::string instructionTypeToString(InstructionType type) {
   switch (type) {
@@ -64,13 +65,23 @@ std::string instructionTypeToString(InstructionType type) {
 }
 
 InstrDependent::InstrDependent(Instruction *instr, std::optional<int> argIndex)
-    : instr(instr), argIndex(argIndex), disabled(false), returnLatch(nullptr) {}
+    : instr(instr), argIndex(argIndex), disabled(false),
+      returnInvocation(nullptr), callCompletion(nullptr) {}
 
 InstrDependent::InstrDependent(Instruction *instr, int argIndex)
     : InstrDependent(instr, std::make_optional(argIndex)) {}
 
 InstrDependent::InstrDependent(Instruction *instr)
     : InstrDependent(instr, std::nullopt) {}
+
+ReturnInvocation::ReturnInvocation(std::uint64_t id,
+                                   std::vector<InstrDependent> dependents)
+    : id(id), claimed(false), dependents(std::move(dependents)) {}
+
+CallCompletion::CallCompletion(std::uint64_t invocationId, int expectedSignals,
+                               InstrDependent dependent)
+    : invocationId(invocationId), remaining(expectedSignals),
+      dependent(std::move(dependent)), result(nullptr) {}
 
 Instruction::Instruction(int id, std::shared_ptr<Scope<Value>> scope)
     : id(id), type((InstructionType)0), bytecodeArgs(std::vector<Value>()),

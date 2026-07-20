@@ -110,11 +110,63 @@ getCompletionInstructionIds(std::shared_ptr<Subprogram> program) {
       }
     }
 
-    if (instr.type == InstructionType::Call || !hasInternalDependent)
+    // A nested Call with an internal continuation is not terminal merely
+    // because its body runs asynchronously. Its own completion barrier will
+    // release that continuation when the nested invocation actually ends.
+    if (!hasInternalDependent)
       ids.push_back(i);
+
+    if (instr.type == InstructionType::Function) {
+      // A declaration executes in this invocation, but its body does not. The
+      // nested Call clones that body and propagates its own completion signal.
+      auto &nestedBody = program->at(i + 1);
+      i += std::get<int>(nestedBody.bytecodeArgs[0].val) + 1;
+    }
   }
 
   return ids;
+}
+
+static std::unordered_set<int>
+getStableCompletionInstructionIds(std::shared_ptr<Subprogram> program,
+                                  const std::vector<int> &instructionIds) {
+  std::unordered_set<int> ids(instructionIds.begin(), instructionIds.end());
+
+  for (const auto &instr : *program) {
+    if (instr.type != InstructionType::GoTo)
+      continue;
+
+    int conditionId = instr.id + std::get<int>(instr.bytecodeArgs[0].val);
+    if (conditionId < 0)
+      continue;
+    int whileId = conditionId;
+    while (whileId < instr.id &&
+           program->at(whileId).type != InstructionType::While)
+      whileId++;
+    if (whileId >= instr.id ||
+        program->at(whileId).type != InstructionType::While)
+      continue;
+
+    bool hasRepeatingSignal = false;
+    for (int id = conditionId; id <= instr.id; id++) {
+      if (ids.erase(id) > 0)
+        hasRepeatingSignal = true;
+    }
+
+    // While only publishes non-block dependents when its condition is false,
+    // so it provides one stable signal after the entire GoTo cycle finishes.
+    if (hasRepeatingSignal)
+      ids.insert(whileId);
+  }
+
+  return ids;
+}
+
+static bool releasesGoTo(const InstrDependent &dependent) {
+  const InstrDependent *current = &dependent;
+  while (current->callCompletion)
+    current = &current->callCompletion->dependent;
+  return current->instr->type == InstructionType::GoTo;
 }
 
 static std::runtime_error
@@ -142,10 +194,46 @@ void Executor::updateDependency(InstrDependent dep,
   std::lock_guard<std::recursive_mutex> dependencyStateLock(
       dependencyStateMutex);
 
-  if (dep.disabled || dep.instr->skipped)
+  if (dep.disabled)
     return;
 
-  if (dep.returnLatch && dep.returnLatch->exchange(true))
+  if (dep.returnInvocation) {
+    auto invocation = dep.returnInvocation;
+    if (invocation->claimed.exchange(true)) {
+      if (cliArgs.verbose)
+        log(LOCATION, "\tCall invocation {} ignored a later return value {}",
+            invocation->id, result ? valToStr(*result) : "none");
+      return;
+    }
+
+    if (cliArgs.verbose)
+      log(LOCATION,
+          "\tCall invocation {} selected return value {} for {} dependents",
+          invocation->id, result ? valToStr(*result) : "none",
+          invocation->dependents.size());
+
+    for (auto returnDependent : invocation->dependents)
+      updateDependency(returnDependent, result);
+    return;
+  }
+
+  if (dep.callCompletion) {
+    auto completion = dep.callCompletion;
+    if (!completion->result && result)
+      completion->result = result;
+
+    int remaining = completion->remaining.fetch_sub(1) - 1;
+    if (cliArgs.verbose)
+      log(LOCATION,
+          "\tCall invocation {} completion barrier has {} signals remaining",
+          completion->invocationId, std::max(remaining, 0));
+
+    if (remaining == 0)
+      updateDependency(completion->dependent, completion->result);
+    return;
+  }
+
+  if (dep.instr->skipped)
     return;
 
   // Don't re-set dep args
@@ -586,16 +674,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
         std::lock_guard<std::mutex> fulfilledLock(
             depsFulfilledMutexes[dep.instr->id]);
-        int fulfilledToReset = 1;
-        if (loopDependency.type == InstructionType::Call && dep.disabled) {
-          auto remaps =
-              parseDependencyRemappings(loopDependency.bytecodeArgs).first;
-          auto remap = remaps.find(depIndex);
-          if (remap != remaps.end())
-            fulfilledToReset = remap->second.size();
-        }
         dep.instr->depsFulfilled =
-            std::max(dep.instr->depsFulfilled - fulfilledToReset, 0);
+            std::max(dep.instr->depsFulfilled - 1, 0);
 
         if (dep.instr == &instr && cliArgs.verbose) {
           log(LOCATION, "\tDecremented depsFulfilled from {} to {}",
@@ -646,10 +726,13 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto func = std::get<std::shared_ptr<Function>>(instr.depArgs[0]->val);
     auto body = func->getBody().clone();
+    auto callInvocationId = nextCallInvocationId.fetch_add(1);
 
     if (cliArgs.verbose) {
-      log(LOCATION, "Calling function '{}' with {} instructions",
-          func->getName(), body->size());
+      log(LOCATION,
+          "Calling function '{}' with {} instructions (generated loop body: "
+          "{})",
+          func->getName(), body->size(), func->isGeneratedLoopBody());
     }
 
     auto &block = body->at(0);
@@ -660,42 +743,46 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto res = parseDependencyRemappings(instr.bytecodeArgs);
     auto remaps = res.first;
-
+    auto remappedDependencyIndices = std::unordered_set<int>();
+    std::vector<std::pair<InstrDependent, std::vector<int>>>
+        remappedDependencies;
     for (auto remap : remaps) {
       auto &dependent = instr.dependents[remap.first];
-      bool directDependencyExists = !dependent.disabled;
+      auto remappedDependent = dependent;
+      remappedDependent.disabled = false;
 
-      for (auto dependencyIndex : remap.second) {
-        auto remappedDependent = dependent;
-        remappedDependent.disabled = false;
-        if (cliArgs.verbose)
-          log(LOCATION, "\tMade {} depend on {}",
-              body->at(dependencyIndex).toString(),
-              dependent.instr->toString());
-        body->at(dependencyIndex).dependents.push_back(remappedDependent);
-      }
-
-      // The first expansion replaces one direct edge with all remapped edges.
-      if (directDependencyExists) {
-        std::lock_guard<std::mutex> fulfilledLock(
-            depsFulfilledMutexes[dependent.instr->id]);
-        dependent.instr->depCount += remap.second.size() - 1;
-      }
+      remappedDependencyIndices.insert(remap.first);
+      remappedDependencies.emplace_back(remappedDependent, remap.second);
 
       if (cliArgs.verbose)
         log(LOCATION,
-            "Disabling {} dependency since it is now handled by dependency "
-            "remaps",
-            dependent.instr->toString());
-      dependent.disabled = true;
+            "Call invocation {} handles {} through dependency remaps",
+            callInvocationId, dependent.instr->toString());
     }
 
     // Remap arguments
     res = parseArgumentRemappings(instr.bytecodeArgs, res.second);
     remaps = res.first;
+    auto argumentValueIds = std::unordered_set<int>();
 
     for (auto remap : remaps) {
       auto &arg = instr.program->at(instr.id + remap.first);
+      argumentValueIds.insert(arg.id);
+
+      // Parameter declarations are released by this Call, so their Set
+      // instructions cannot finish before the invocation has been created.
+      // Gate the cloned body on every argument value to ensure conditional
+      // paths cannot read invocation parameters before they are initialized.
+      arg.dependents.emplace_back(&block);
+      {
+        std::lock_guard<std::mutex> fulfilledLock(
+            depsFulfilledMutexes[block.id]);
+        block.depCount++;
+      }
+
+      if (cliArgs.verbose)
+        log(LOCATION, "Call invocation {} gates its body on argument {}",
+            callInvocationId, arg.toString());
 
       for (auto dependentIndex : remap.second) {
         arg.dependents.emplace_back(&body->at(dependentIndex));
@@ -725,22 +812,31 @@ void Executor::execSingleInstruction(Instruction &instr) {
         parseReturnIdsFromBytecodeArgs(instr.bytecodeArgs, argDecRes.second);
     auto returnIds = returnIdsRes.first;
 
-    auto returnLatch = std::make_shared<std::atomic_bool>(false);
-    for (auto &dep : instr.dependents) {
-      if (dep.disabled || !dep.argIndex)
+    std::vector<InstrDependent> returnDependents;
+    for (const auto &dep : instr.dependents) {
+      if (!dep.argIndex)
         continue;
 
+      auto returnDependent = dep;
+      returnDependent.disabled = false;
+      returnDependents.push_back(returnDependent);
+    }
+
+    auto returnInvocation = std::make_shared<ReturnInvocation>(
+        callInvocationId, std::move(returnDependents));
+    if (cliArgs.verbose)
+      log(LOCATION, "Created call invocation {} with {} return dependents",
+          returnInvocation->id, returnInvocation->dependents.size());
+
+    if (!returnInvocation->dependents.empty()) {
       for (auto returnId : returnIds) {
-        auto returnDep = dep;
-        returnDep.returnLatch = returnLatch;
+        // Keep an argument index on the marker edge so skipping an untaken
+        // Return does not publish a null result for the invocation.
+        auto returnDep =
+            InstrDependent(returnInvocation->dependents.front().instr, 0);
+        returnDep.returnInvocation = returnInvocation;
         body->at(returnId).dependents.push_back(returnDep);
       }
-
-      if (cliArgs.verbose)
-        log(LOCATION,
-            "Disabling {} dependency since it is now handled by returns",
-            dep.instr->toString());
-      dep.disabled = true;
     }
 
     for (int i = 1; i < returnIds.size(); i++) {
@@ -755,14 +851,66 @@ void Executor::execSingleInstruction(Instruction &instr) {
       }
     }
 
-    auto completionIds = getCompletionInstructionIds(body);
-    for (auto dep : instr.dependents) {
+    auto completionIds = getStableCompletionInstructionIds(
+        body, getCompletionInstructionIds(body));
+
+    auto attachCompletionBarrier =
+        [&](InstrDependent dependent,
+            const std::unordered_set<int> &signalInstructionIds) {
+          if (signalInstructionIds.empty()) {
+            updateDependency(dependent, result);
+            return;
+          }
+
+          auto completion = std::make_shared<CallCompletion>(
+              callInvocationId,
+              static_cast<int>(signalInstructionIds.size()), dependent);
+          for (auto signalInstructionId : signalInstructionIds) {
+            auto completionSignal = InstrDependent(dependent.instr);
+            completionSignal.callCompletion = completion;
+            body->at(signalInstructionId)
+                .dependents.push_back(completionSignal);
+          }
+
+          if (cliArgs.verbose)
+            log(LOCATION,
+                "Call invocation {} waits for {} resource/terminal signals "
+                "before releasing {}",
+                callInvocationId, signalInstructionIds.size(),
+                dependent.instr->toString());
+        };
+
+    for (auto &[dependent, dependencyIds] : remappedDependencies) {
+      dependencyIds.insert(dependencyIds.end(), completionIds.begin(),
+                           completionIds.end());
+      auto barrierIds =
+          getStableCompletionInstructionIds(body, dependencyIds);
+      attachCompletionBarrier(dependent, barrierIds);
+    }
+
+    for (int depIndex = 0; depIndex < instr.dependents.size(); depIndex++) {
+      if (remappedDependencyIndices.contains(depIndex))
+        continue;
+
+      auto dep = instr.dependents[depIndex];
       if (dep.disabled)
         continue;
 
-      if (dep.argIndex.has_value() ||
-          argDeclarationIds.contains(dep.instr->id)) {
+      // Argument-indexed dependents receive the selected return through the
+      // invocation-local ReturnInvocation above.
+      if (dep.argIndex.has_value())
+        continue;
+
+      if (argDeclarationIds.contains(dep.instr->id) ||
+          argumentValueIds.contains(dep.instr->id)) {
         updateDependency(dep, result);
+        continue;
+      }
+
+      if (dep.callCompletion) {
+        std::unordered_set<int> barrierIds(completionIds.begin(),
+                                           completionIds.end());
+        attachCompletionBarrier(dep, barrierIds);
         continue;
       }
 
@@ -806,12 +954,12 @@ void Executor::execSingleInstruction(Instruction &instr) {
     // flight. Publish loop-back edges last so reaching a GoTo means all other
     // dependency updates from this instruction are complete.
     for (auto dep : instr.dependents) {
-      if (dep.instr->type == InstructionType::GoTo)
+      if (releasesGoTo(dep))
         continue;
       updateDependency(dep, result);
     }
     for (auto dep : instr.dependents) {
-      if (dep.instr->type == InstructionType::GoTo)
+      if (releasesGoTo(dep))
         updateDependency(dep, result);
     }
   }
@@ -935,7 +1083,7 @@ void Executor::startExecution() {
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
                    ExecutionStats *stats)
     : cliArgs(cliArgs), program(program), stats(stats),
-      pendingTasks(0),
+      pendingTasks(0), nextCallInvocationId(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
       halt(false), failed(false), haltCause("Unknown") {

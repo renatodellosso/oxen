@@ -66,6 +66,13 @@ struct Expression {
   // be executed
   virtual std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const;
+  // Route dependencies on resource reads in this expression through a
+  // terminal side effect that consumes those reads.
+  int redirectResourceCompletionsTo(Expression &terminal) const;
+  // Returns the expressions that signal that this expression and any nested
+  // control flow have finished executing.
+  virtual std::vector<std::reference_wrapper<Expression>>
+  getCompletionExpressions() const;
   // Link any internal expressions with each other (e.g. a binary expressions
   // depends on its left and right subexpressions)
   virtual void linkInternally();
@@ -117,6 +124,8 @@ struct IfExpression : public UnaryExpression {
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
+  std::vector<std::reference_wrapper<Expression>>
+  getCompletionExpressions() const override;
   void linkInternally() override;
   int numberExpressions(int startWith) override;
   int countInstructions() const override;
@@ -143,13 +152,15 @@ struct BinaryExpression : public Expression {
 // more complicated than just adding deps for The block's expressions
 struct BlockExpression : public Expression {
   std::vector<std::shared_ptr<Expression>> expressions;
+  // Synthetic control-flow blocks can provide a stable completion signal.
+  std::shared_ptr<Expression> completionExpression;
 
   BlockExpression()
       : BlockExpression(std::vector<std::shared_ptr<Expression>>(), 0) {}
   BlockExpression(std::vector<std::shared_ptr<Expression>> expressions,
                   int lineNumber)
       : Expression(InstructionType::Block, lineNumber),
-        expressions(std::move(expressions)) {}
+        expressions(std::move(expressions)), completionExpression(nullptr) {}
   BlockExpression(int lineNumber)
       : BlockExpression(std::vector<std::shared_ptr<Expression>>(),
                         lineNumber) {}
@@ -160,6 +171,8 @@ struct BlockExpression : public Expression {
   std::string toByteCode(CliArgs args) const override;
   std::vector<std::reference_wrapper<Expression>>
   getWithSubExpressions() const override;
+  std::vector<std::reference_wrapper<Expression>>
+  getCompletionExpressions() const override;
   int numberExpressions(int startWith) override;
   int countInstructions() const override;
 };
@@ -174,6 +187,7 @@ struct Resource;
 struct FunctionExpression : public Expression {
   std::string name;
   std::string returnType;
+  bool generatedLoopBody;
   std::vector<FunctionExprParameter> params;
   std::shared_ptr<Expression> body;
 
@@ -202,11 +216,12 @@ struct FunctionExpression : public Expression {
   std::vector<std::reference_wrapper<Expression>> returnStatements;
 
   FunctionExpression() : FunctionExpression("unnamed_func", "void", 0) {}
-  FunctionExpression(std::string name, std::string returnType, int lineNumber)
+  FunctionExpression(std::string name, std::string returnType, int lineNumber,
+                     bool generatedLoopBody = false)
       : Expression(InstructionType::Function, lineNumber), name(name),
-        returnType(returnType), params(std::vector<FunctionExprParameter>()),
-        body(nullptr), firstUses(), firstWrites(), lastUses(), lastWrites(),
-        finishedLinking(false) {}
+        returnType(returnType), generatedLoopBody(generatedLoopBody),
+        params(std::vector<FunctionExprParameter>()), body(nullptr), firstUses(),
+        firstWrites(), lastUses(), lastWrites(), finishedLinking(false) {}
   FunctionExpression(int lineNumber)
       : FunctionExpression("unnamed_func", "void", lineNumber) {}
 
@@ -225,9 +240,11 @@ struct FunctionExpression : public Expression {
 struct CallExpression;
 
 struct UnaryCallExpression : public UnaryExpression {
-  // Dependent remappings - maps dependent index to subprogram IDs that that
-  // dep should depend on instead of this call
-  std::unordered_map<int, std::vector<std::reference_wrapper<Expression>>>
+  // Dependent remappings map dependent identity to subprogram instructions
+  // that it should wait for instead of this call. Its bytecode index depends
+  // on unordered-set emission order and is resolved during serialization.
+  std::unordered_map<Expression *,
+                     std::vector<std::reference_wrapper<Expression>>>
       depRemaps;
 
   std::optional<std::reference_wrapper<FunctionExpression>> function;

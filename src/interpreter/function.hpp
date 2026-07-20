@@ -11,6 +11,7 @@ struct FunctionParam {
 class Function {
   std::string name;
   std::string returnType;
+  bool generatedLoopBody;
 
   Subprogram body;
 
@@ -19,6 +20,7 @@ public:
 
   std::string getName() const;
   std::string getReturnType() const;
+  bool isGeneratedLoopBody() const;
 
   Subprogram &getBody();
 };

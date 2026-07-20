@@ -122,7 +122,7 @@ void Tokenizer::parseToken() {
   if (c == '"') {
     // String
     for (c = stream.peek();
-         raw.size() < 3 ||
+         raw.size() < 2 ||
          raw.at(raw.size() - 1) != '"' && raw.at(raw.size() - 2) != '\\';
          c = stream.peek()) {
       stream.get();

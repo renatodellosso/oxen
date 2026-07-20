@@ -1,4 +1,5 @@
 build/
+build*/
 *.trace
 .cache/
 .DS_Store

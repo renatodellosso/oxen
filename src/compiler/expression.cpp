@@ -78,6 +78,29 @@ Expression::getWithSubExpressions() const {
   return vector;
 }
 
+int Expression::redirectResourceCompletionsTo(Expression &terminal) const {
+  int redirected = 0;
+  for (auto subexpression : getWithSubExpressions()) {
+    auto &completion = subexpression.get();
+    if (completion.type != InstructionType::GetIdentifier &&
+        completion.type != InstructionType::ReferenceIdentifier)
+      continue;
+
+    // Preserve redirects already owned by nested side effects or control flow.
+    if (completion.dependentRedirect)
+      continue;
+
+    completion.dependentRedirect = &terminal;
+    redirected++;
+  }
+  return redirected;
+}
+
+std::vector<std::reference_wrapper<Expression>>
+Expression::getCompletionExpressions() const {
+  return {*(Expression *)this};
+}
+
 void Expression::linkInternally() { return; }
 
 int Expression::numberExpressions(int startWith) {
@@ -225,6 +248,23 @@ BlockExpression::getWithSubExpressions() const {
   return vector;
 }
 
+std::vector<std::reference_wrapper<Expression>>
+BlockExpression::getCompletionExpressions() const {
+  if (completionExpression)
+    return {*completionExpression};
+
+  if (expressions.empty())
+    return Expression::getCompletionExpressions();
+
+  std::vector<std::reference_wrapper<Expression>> completions;
+  for (const auto &expr : expressions) {
+    auto exprCompletions = expr->getCompletionExpressions();
+    std::move(exprCompletions.begin(), exprCompletions.end(),
+              std::back_inserter(completions));
+  }
+  return completions;
+}
+
 int BlockExpression::numberExpressions(int startWith) {
   startWith = Expression::numberExpressions(startWith);
 
@@ -304,12 +344,17 @@ IfExpression::getWithSubExpressions() const {
   return vector;
 }
 
+std::vector<std::reference_wrapper<Expression>>
+IfExpression::getCompletionExpressions() const {
+  return {*mergeInstruction};
+}
+
 void IfExpression::linkInternally() {
   addDependency(*this, *root, 0);
 
-  auto thenExprs = thenBlock->getWithSubExpressions();
+  auto thenCompletions = thenBlock->getCompletionExpressions();
   addDependency(*mergeInstruction, *this);
-  for (auto expr : thenExprs)
+  for (auto expr : thenCompletions)
     addDependency(*mergeInstruction, expr.get());
 
   if (!elseBlock)
@@ -317,13 +362,13 @@ void IfExpression::linkInternally() {
 
   addDependency(*elseInstruction, *this, 0);
 
-  for (auto expr : thenExprs)
+  for (auto expr : thenCompletions)
     addDependency(*elseInstruction, expr.get());
 
   addDependency(*mergeInstruction, *elseInstruction);
 
-  auto elseExprs = elseBlock->getWithSubExpressions();
-  for (auto expr : elseExprs)
+  auto elseCompletions = elseBlock->getCompletionExpressions();
+  for (auto expr : elseCompletions)
     addDependency(*mergeInstruction, expr.get());
 }
 
@@ -376,13 +421,12 @@ void FunctionExpression::findReturnStatements() {
   }
 }
 
-// Bytecode params are in format "[returnType] [name] [# of params] [param i
-// type] [param i name] [first uses] [first writes] [last uses] [last
-// writes]"
+// Bytecode params are in format "[returnType] [name] [generated loop body]".
 std::string FunctionExpression::toByteCode(CliArgs args) const {
   // Subtract 1 from count to exclude this instruction
-  std::string str =
-      Expression::toByteCode(args) + " " + returnType + " " + name + "\n";
+  std::string str = Expression::toByteCode(args) + " " + returnType + " " +
+                    name + " " +
+                    (generatedLoopBody ? "true" : "false") + "\n";
 
   str += body->toByteCode(args);
 
@@ -440,11 +484,23 @@ std::string UnaryCallExpression::toByteCode(CliArgs args) const {
   int subprogramOffset = -function.value().get().id - 1;
 
   // Write dependent remappings
-  bytecode += " " + std::to_string(depRemaps.size());
-  for (auto remap : depRemaps) {
-    bytecode += " " + std::to_string(remap.first) + " " +
-                std::to_string(remap.second.size());
-    for (auto dep : remap.second)
+  std::vector<
+      std::pair<int,
+                const std::vector<std::reference_wrapper<Expression>> *>>
+      emittedRemaps;
+  int dependentIndex = 0;
+  for (const auto &dependent : dependents) {
+    auto remap = depRemaps.find(&dependent.expr.get());
+    if (remap != depRemaps.end())
+      emittedRemaps.emplace_back(dependentIndex, &remap->second);
+    dependentIndex++;
+  }
+
+  bytecode += " " + std::to_string(emittedRemaps.size());
+  for (const auto &[index, remap] : emittedRemaps) {
+    bytecode +=
+        " " + std::to_string(index) + " " + std::to_string(remap->size());
+    for (auto dep : *remap)
       bytecode += " " + std::to_string(dep.get().id + subprogramOffset);
   }
 
@@ -542,11 +598,18 @@ void CallExpression::linkInternally() {
 
   auto &actualCall = getActualCall();
 
-  // Add dependency from argument declarations to the call instruction
+  // The declarations let the Call create its invocation scope. Argument Sets
+  // must wait for that scope before storing invocation-local parameter values.
   for (int i = 1; i < expressions.size(); i++) {
-    auto &declaration =
-        std::static_pointer_cast<BinaryExpression>(expressions[i])->left;
+    auto &argument = expressions[i];
+    auto argumentSet = std::static_pointer_cast<BinaryExpression>(argument);
+    auto &declaration = argumentSet->left;
     addDependency(*declaration.get(), actualCall);
+    addDependency(*argument, actualCall);
+
+    // A later write must wait for the invocation that consumes this resource
+    // value, not merely for the argument expression to read it.
+    argumentSet->right->redirectResourceCompletionsTo(actualCall);
   }
 }
 

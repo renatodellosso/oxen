@@ -1,9 +1,14 @@
 #include "../../src/interpreter/executor.hpp"
 #include "../../src/interpreter/function.hpp"
+#include "../../src/compiler/compiler.hpp"
+#include "../../src/interpreter/bytecodeParser.hpp"
 #include "../testUtils.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <format>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <vector>
 
 std::vector<Instruction> getInstrs() {
@@ -286,6 +291,7 @@ Instruction getFuncInstr() {
   funcInstr.bytecodeArgs = {
       {ValueType::Identifier, "int"},
       {ValueType::Identifier, "func"},
+      {ValueType::Bool, true},
 
       // Params
       {ValueType::Integer, 2},
@@ -367,6 +373,249 @@ TEST(startExecution, initsFunctions) {
             std::get<std::string>(funcInstr.bytecodeArgs[0].val));
   EXPECT_EQ(func->getName(),
             std::get<std::string>(funcInstr.bytecodeArgs[1].val));
+  EXPECT_TRUE(func->isGeneratedLoopBody());
 
   REENABLE_COUT
+}
+
+TEST(startExecution, remapsReturnsAfterCallDirectDependencyIsDisabled) {
+  auto instrs = std::make_shared<std::vector<Instruction>>();
+  for (int i = 0; i < 7; i++)
+    instrs->emplace_back(i);
+
+  auto &function = instrs->at(0);
+  function.type = InstructionType::Function;
+  function.bytecodeArgs = {{ValueType::Identifier, "bool"},
+                           {ValueType::Identifier, "predicate"}};
+  function.dependents = {InstrDependent(&instrs->at(1)),
+                         InstrDependent(&instrs->at(4))};
+
+  auto &body = instrs->at(1);
+  body.type = InstructionType::Block;
+  body.depCount = 1;
+  body.bytecodeArgs = {{ValueType::Integer, 2}, {ValueType::Integer, 0}};
+  body.dependents = {InstrDependent(&instrs->at(2))};
+
+  auto &literal = instrs->at(2);
+  literal.type = InstructionType::GetLiteral;
+  literal.depCount = 1;
+  literal.bytecodeArgs = {{ValueType::Bool, true}};
+  literal.dependents = {InstrDependent(&instrs->at(3), 0)};
+
+  auto &returnInstruction = instrs->at(3);
+  returnInstruction.type = InstructionType::Return;
+  returnInstruction.depCount = 1;
+
+  auto &getFunction = instrs->at(4);
+  getFunction.type = InstructionType::GetIdentifier;
+  getFunction.depCount = 1;
+  getFunction.bytecodeArgs = {{ValueType::Identifier, "predicate"}};
+  getFunction.dependents = {InstrDependent(&instrs->at(5), 0)};
+
+  auto &call = instrs->at(5);
+  call.type = InstructionType::Call;
+  call.depCount = 1;
+  call.bytecodeArgs = {
+      {ValueType::Integer, 0}, // Dependency remappings
+      {ValueType::Integer, 0}, // Argument remappings
+      {ValueType::Integer, 0}, // Argument declarations
+      {ValueType::Integer, 1}, // Return instructions
+      {ValueType::Integer, 2}, // Return instruction ID in the function body
+  };
+  call.dependents = {InstrDependent(&instrs->at(6), 0)};
+  call.dependents[0].disabled = true;
+
+  auto &print = instrs->at(6);
+  print.type = InstructionType::Print;
+  print.depCount = 1;
+
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor({.threads = 1}, *program);
+
+  DISABLE_COUT
+  executor.startExecution();
+  auto output = REENABLE_COUT
+
+  EXPECT_EQ(output, "true\n");
+}
+
+TEST(startExecution, isolatesBranchedReturnsAcrossConcurrentCallInvocations) {
+  constexpr int callsPerBranch = 4;
+  std::string source =
+      "string choose(bool outer, bool inner) {\n"
+      "if (outer) return \"outer\";\n"
+      "else {\n"
+      "if (inner) return \"inner\";\n"
+      "else return \"fallback\";\n"
+      "}\n"
+      "}\n";
+  std::vector<std::string> expected;
+  for (int i = 0; i < callsPerBranch; i++) {
+    source += "print choose(true, false);\n";
+    source += "print choose(false, true);\n";
+    source += "print choose(false, false);\n";
+    expected.insert(expected.end(), {"outer", "inner", "fallback"});
+  }
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+  EXPECT_THAT(actual, testing::UnorderedElementsAreArray(expected));
+}
+
+TEST(startExecution, waitsForTerminalCallSideEffectsAfterDependencyRemapping) {
+  constexpr int callCount = 8;
+  std::string source =
+      "int value = 0;\n"
+      "void printValue() { print value; }\n";
+  std::vector<std::string> expected;
+  for (int i = 0; i < callCount; i++) {
+    source += "printValue();\n";
+    if (i + 1 < callCount)
+      source += "value = value + 1;\n";
+    expected.push_back(std::to_string(i));
+  }
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(startExecution, waitsForCallsInsideLoopIterations) {
+  constexpr int iterations = 16;
+  std::string source =
+      "void printValue(int value) { print value; }\n"
+      "int i = 0;\n" + std::format("while (i < {}) {{\n", iterations) +
+      "printValue(i);\n"
+      "i = i + 1;\n"
+      "}\n";
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+
+  std::vector<std::string> expected;
+  for (int i = 0; i < iterations; i++)
+    expected.push_back(std::to_string(i));
+  EXPECT_EQ(actual, expected);
+
+  int executedCalls = 0;
+  for (const auto &instruction : *program) {
+    if (instruction.type != InstructionType::Call || !instruction.executed)
+      continue;
+
+    executedCalls++;
+    for (const auto &dependent : instruction.dependents)
+      EXPECT_FALSE(dependent.disabled);
+  }
+  EXPECT_GT(executedCalls, 0);
+}
+
+TEST(startExecution, waitsForLeadingSideEffectsBeforeRecursiveCalls) {
+  constexpr int initialValue = 12;
+  std::string source =
+      "int remaining = 12;\n"
+      "void countDown() {\n"
+      "print remaining;\n"
+      "if (remaining) {\n"
+      "remaining = remaining - 1;\n"
+      "countDown();\n"
+      "}\n"
+      "}\n"
+      "countDown();\n";
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+
+  std::vector<std::string> expected;
+  for (int i = initialValue; i >= 0; i--)
+    expected.push_back(std::to_string(i));
+  EXPECT_EQ(actual, expected);
 }
