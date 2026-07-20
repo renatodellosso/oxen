@@ -773,9 +773,11 @@ void Executor::execSingleInstruction(Instruction &instr) {
     // Remap arguments
     res = parseArgumentRemappings(instr.bytecodeArgs, res.second);
     remaps = res.first;
+    auto argumentValueIds = std::unordered_set<int>();
 
     for (auto remap : remaps) {
       auto &arg = instr.program->at(instr.id + remap.first);
+      argumentValueIds.insert(arg.id);
 
       // Parameter declarations are released by this Call, so their Set
       // instructions cannot finish before the invocation has been created.
@@ -905,7 +907,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
       if (dep.argIndex.has_value())
         continue;
 
-      if (argDeclarationIds.contains(dep.instr->id)) {
+      if (argDeclarationIds.contains(dep.instr->id) ||
+          argumentValueIds.contains(dep.instr->id)) {
         updateDependency(dep, result);
         continue;
       }

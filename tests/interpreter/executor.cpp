@@ -564,3 +564,47 @@ TEST(startExecution, waitsForCallsInsideLoopIterations) {
     expected.push_back(std::to_string(i));
   EXPECT_EQ(actual, expected);
 }
+
+TEST(startExecution, waitsForLeadingSideEffectsBeforeRecursiveCalls) {
+  constexpr int initialValue = 12;
+  std::string source =
+      "int remaining = 12;\n"
+      "void countDown() {\n"
+      "print remaining;\n"
+      "if (remaining) {\n"
+      "remaining = remaining - 1;\n"
+      "countDown();\n"
+      "}\n"
+      "}\n"
+      "countDown();\n";
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+
+  std::vector<std::string> expected;
+  for (int i = initialValue; i >= 0; i--)
+    expected.push_back(std::to_string(i));
+  EXPECT_EQ(actual, expected);
+}

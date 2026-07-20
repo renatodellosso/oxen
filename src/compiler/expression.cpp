@@ -568,11 +568,14 @@ void CallExpression::linkInternally() {
 
   auto &actualCall = getActualCall();
 
-  // Add dependency from argument declarations to the call instruction
+  // The declarations let the Call create its invocation scope. Argument Sets
+  // must wait for that scope before storing invocation-local parameter values.
   for (int i = 1; i < expressions.size(); i++) {
+    auto &argument = expressions[i];
     auto &declaration =
-        std::static_pointer_cast<BinaryExpression>(expressions[i])->left;
+        std::static_pointer_cast<BinaryExpression>(argument)->left;
     addDependency(*declaration.get(), actualCall);
+    addDependency(*argument, actualCall);
   }
 }
 

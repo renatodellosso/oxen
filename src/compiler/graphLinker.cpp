@@ -37,6 +37,26 @@ static void deduplicateDependenciesForSet(BinaryExpression &set,
   }
 }
 
+static int redirectSubexpressionCompletion(Expression &terminal) {
+  int redirected = 0;
+  for (auto subexpression : terminal.getWithSubExpressions()) {
+    auto *completion = &subexpression.get();
+    if (completion->type != InstructionType::GetIdentifier &&
+        completion->type != InstructionType::ReferenceIdentifier)
+      continue;
+
+    // Preserve redirects already owned by another control-flow construct. In
+    // particular, a Print around a Call must not replace the Call's completion
+    // barrier with the Print itself.
+    if (completion->dependentRedirect)
+      continue;
+
+    completion->dependentRedirect = &terminal;
+    redirected++;
+  }
+  return redirected;
+}
+
 static void
 addDependency(Expression &expr, Expression &dependsOn,
               std::optional<std::string> resourceName = std::nullopt) {
@@ -370,6 +390,12 @@ void GraphLinker::processExpression(Expression &expr) {
       addDependency(next->second, expr); // Add dependency with else block
     } else if (expr.type == InstructionType::BranchMerge) {
       finalizeBranchMerge(expr);
+    } else if (expr.type == InstructionType::Print) {
+      int redirected = redirectSubexpressionCompletion(expr);
+      if (cliArgs.verbose)
+        log(LOCATION,
+            "Redirected {} resource dependency completions to Print {}",
+            redirected, expr.id);
     } else if (expr.type == InstructionType::Block) {
       BlockExpression &block = *static_cast<BlockExpression *>(&expr);
       int size =
