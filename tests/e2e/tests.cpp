@@ -5,6 +5,8 @@ std::vector<E2eTest> tests = {
     {"PrintWorksWithNumbers", "print 1;", ExpectUnordered({"1"})},
     {"PrintWorksWithStrings", "print \"abc\";", ExpectUnordered({"abc"})},
     {"PrintWorksWithBools", "print true;", ExpectUnordered({"true"})},
+    {"PrintWorksWithEmptyStrings", "print \"\";", ExpectUnordered({""})},
+    {"PrintPreservesStringWhitespace", "print \"a b\t c\";", ExpectUnordered({"a b\t c"})},
     {"PrintWorksWithMultiplePrints", "print 2;\nprint false;", ExpectUnordered({"false", "2"})},
 
     // Addition
@@ -12,7 +14,14 @@ std::vector<E2eTest> tests = {
     {"AdditionWorksWithThreeNumbers", "print 1 + 1 + 1;", ExpectUnordered({"3"})},
     {"AdditionWorksWithStrings", "print \"a\" + \"b\";", ExpectUnordered({"ab"})},
     {"AdditionWorksWithBools", "print false + true;", ExpectUnordered({"true"})},
+    {"AdditionWorksWithFalseBools", "print false + false;", ExpectUnordered({"false"})},
     {"AdditionWorksWithMixedTypes", "print 1 + \"b\" + true;", ExpectUnordered({"1btrue"})},
+    {"AdditionStringifiesMixedTypesInEitherOperandOrder",
+     "print true + \"b\" + 1;",
+     ExpectUnordered({"trueb1"})},
+    {"MixedArithmeticOperatorsAreGroupedFromTheRight",
+     "print 2 * 3 + 4;\nprint 1 + 2 * 3;",
+     ExpectUnordered({"14", "7"})},
 
     // Subtraction
     {"SubtractionWorks", "print 1 - 1;", ExpectUnordered({"0"})},
@@ -28,9 +37,11 @@ std::vector<E2eTest> tests = {
     {"DivisionWorksWhenCleanlyDivisible", "print 4 / 2;", ExpectUnordered({"2"})},
     {"DivisionWorksWhenNotCleanlyDivisible", "print 3 / 2;", ExpectUnordered({"1"})},
     {"DivisionWorksWithNegativeNumbers", "print 1 / -1;", ExpectUnordered({"-1"})},
+    {"DivisionWorksWithNegativeDividends", "print -3 / 2;", ExpectUnordered({"-1"})},
+    {"DivisionChainsAreGroupedFromTheRight", "print 8 / 4 / 2;", ExpectUnordered({"4"})},
     {"DivisionByZeroReportsRuntimeError",
      "print 1 / 0;",
-     ExpectError(ExitCode::ExecutionError, "Division by zero")},
+     ExpectError(ExitCode::ExecutionError, "dIvIsIoN bY zErO")},
 
     // Equality
     {"EqualityWorksWithEqualNumbers", "print 1 == 1;", ExpectUnordered({"true"})},
@@ -89,6 +100,16 @@ std::vector<E2eTest> tests = {
     {"VariablesCanBeUsedToUpdateThemselves",
      "int a = 1;\na = a + 1;\nprint a;",
      ExpectUnordered({"2"})},
+    {"VariableNamesCanContainDigits",
+     "int value2 = 2;\nprint value2;",
+     ExpectUnordered({"2"})},
+    {"NestedBlocksCanReadAndUpdateEnclosingVariables",
+     "int a = 1;\n{ a = a + 1; }\nprint a;",
+     ExpectUnordered({"2"})},
+    {"NestedBlocksCanShadowEnclosingVariables",
+     "int a = 1;\n{ int a = 2; print a; }\nprint a;",
+     ExpectUnordered({"1", "2"})},
+    {"EmptyBlocksAreAllowed", "{}\nprint \"done\";", ExpectUnordered({"done"})},
 
     // If statements
     {"IfsDontRunIfConditionIsFalse", "if (false) { print \"ran\"; }", ExpectUnordered({})},
@@ -98,6 +119,10 @@ std::vector<E2eTest> tests = {
     {"IfsAllowVariablesInCondition",
      "bool a = true;\nif (a) print \"ran\";",
      ExpectUnordered({"ran"})},
+    {"IfsTreatZeroAsFalse", "if (0) print \"ran\";", ExpectUnordered({})},
+    {"IfsTreatNegativeIntegersAsTrue", "if (-1) print \"ran\";", ExpectUnordered({"ran"})},
+    {"IfsTreatEmptyStringsAsFalse", "if (\"\") print \"ran\";", ExpectUnordered({})},
+    {"IfsTreatNonEmptyStringsAsTrue", "if (\"a\") print \"ran\";", ExpectUnordered({"ran"})},
     {"ElsesDoNotRunIfConditionIsTrue",
      "if (true) print \"then\"; else print \"else\";",
      ExpectUnordered({"then"})},
@@ -126,6 +151,20 @@ std::vector<E2eTest> tests = {
      "int a = 0;\n"
      "if (false) a = 1; else a = 2;\n"
      "print a;",
+     ExpectUnordered({"2"})},
+    {"IfBranchWritesAreVisibleAfterTrueBranch",
+     "int a = 0;\nif (true) a = 1;\nprint a;",
+     ExpectUnordered({"1"})},
+    {"SkippedIfBranchPreservesPreviousValue",
+     "int a = 0;\nif (false) a = 1;\nprint a;",
+     ExpectUnordered({"0"})},
+    {"IfsCanBeNested",
+     "if (true) { if (false) print \"wrong\"; else print \"nested\"; }",
+     ExpectUnordered({"nested"})},
+    {"ElseBlocksCanContainLoops",
+     "int i = 0;\n"
+     "if (false) print \"wrong\"; else { while (i < 2) i = i + 1; }\n"
+     "print i;",
      ExpectUnordered({"2"})},
 
     // While loops
@@ -158,6 +197,20 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print i;",
      ExpectUnordered({"3"})},
+    {"WhileLoopsCanRunZeroIterations",
+     "int i = 0;\nwhile (false) i = i + 1;\nprint i;",
+     ExpectUnordered({"0"})},
+    {"WhileLoopsCanUseStringTruthiness",
+     "string value = \"run\";\n"
+     "while (value) { print value; value = \"\"; }",
+     ExpectUnordered({"run"})},
+    {"WhileLoopsCanContainIfStatements",
+     "int i = 0;\n"
+     "while (i < 3) {\n"
+     "if (i == 1) print \"middle\";\n"
+     "i = i + 1;\n"
+     "}",
+     ExpectUnordered({"middle"})},
     {
         "WhileLoopsCanCountIterationsCorrectly",
         "int sum = 0;\n"
@@ -327,6 +380,12 @@ std::vector<E2eTest> tests = {
      "print a;"
      "}",
      ExpectUnordered({})},
+    {"FunctionParametersShadowVariablesWhenCalled",
+     "int a = 1;\n"
+     "void printValue(int a) { print a; }\n"
+     "printValue(2);\n"
+     "print a;",
+     ExpectUnordered({"1", "2"})},
 
     // Calls
     {"CallsCallFunctions",
@@ -407,6 +466,10 @@ std::vector<E2eTest> tests = {
      "}\n"
      "add(1, 2);",
      ExpectUnordered({"3"})},
+    {"CallsAcceptExpressionArguments",
+     "void printArg(int a) { print a; }\n"
+     "printArg(1 + 2);",
+     ExpectUnordered({"3"})},
     {"CallsWithArgumentsDoNotShareParameterScopes",
      "void printArg(int a) {\n"
      "print a;\n"
@@ -461,6 +524,26 @@ std::vector<E2eTest> tests = {
      "}\n"
      "main(1);",
      ExpectUnordered({"6"})},
+    {"CallsCanBeNestedAsArguments",
+     "int increment(int a) { return a + 1; }\n"
+     "int twice(int a) { return a * 2; }\n"
+     "print twice(increment(2));",
+     ExpectUnordered({"6"})},
+    {"CallResultsCanBeAssignedAndUsedInArithmetic",
+     "int increment(int a) { return a + 1; }\n"
+     "int value = increment(2);\n"
+     "print value + increment(3);",
+     ExpectUnordered({"7"})},
+    {"CallResultsCanBeUsedInComparisonsAndConditions",
+     "int identity(int a) { return a; }\n"
+     "if (identity(2) == 2) print \"equal\";\n"
+     "if (identity(1)) print \"truthy\";",
+     ExpectUnordered({"equal", "truthy"})},
+    {"FunctionsCanBeCalledInsideLoops",
+     "void printArg(int a) { print a; }\n"
+     "int i = 0;\n"
+     "while (i < 3) { printArg(i); i = i + 1; }",
+     ExpectOrdered({"0", "1", "2"})},
 
     {"ReturnsWork", "int main() { return 1; }\nprint main();", ExpectUnordered({"1"})},
     {"ReturnsWorkWithMultipleCalls",
@@ -522,5 +605,37 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print main();",
      ExpectUnordered({"0", "done"})},
+
+    // Invalid programs
+    {"UndefinedVariablesReportSyntaxErrors",
+     "print missing;",
+     ExpectError(ExitCode::SyntaxErrors, "does not exist")},
+    {"UndefinedFunctionsReportSyntaxErrors",
+     "missing();",
+     ExpectError(ExitCode::SyntaxErrors, "did not exist")},
+    {"DuplicateDeclarationsReportSyntaxErrors",
+     "int a;\nint a;",
+     ExpectError(ExitCode::SyntaxErrors, "already existed")},
+    {"SubtractionRejectsNonIntegerOperands",
+     "print true - false;",
+     ExpectError(ExitCode::ExecutionError, "Invalid arg types")},
+    {"MultiplicationRejectsNonIntegerOperands",
+     "print \"a\" * 2;",
+     ExpectError(ExitCode::ExecutionError, "Invalid arg types")},
+    {"DivisionRejectsNonIntegerOperands",
+     "print true / 2;",
+     ExpectError(ExitCode::ExecutionError, "Invalid arg types")},
+    {"OrderedComparisonsRejectBoolOperands",
+     "print false < true;",
+     ExpectError(ExitCode::ExecutionError, "Invalid arg types")},
+    {"OrderedComparisonsRejectMixedOperands",
+     "print 1 < \"1\";",
+     ExpectError(ExitCode::ExecutionError, "Invalid arg types")},
+    {"MissingClosingBracesReportSyntaxErrors",
+     "if (true) { print 1;",
+     ExpectError(ExitCode::SyntaxErrors, "Expected '}'")},
+    {"StrayElseReportsSyntaxErrors",
+     "else print 1;",
+     ExpectError(ExitCode::SyntaxErrors, "without an if")},
 
 };
