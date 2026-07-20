@@ -28,6 +28,9 @@ class Executor {
   // We have to put the mutexes in here since we can't move them
   std::vector<std::mutex> depArgsMutexes, depsFulfilledMutexes;
 
+  // Loop-back instructions reset dependency state across many instructions.
+  // Keep that reset atomic with respect to dependency publication.
+  std::mutex dependencyStateMutex;
   std::mutex coutMutex;
 
   // Set to true to end workers

@@ -80,31 +80,35 @@ TEST_P(E2EFixture, E2E) {
   auto test = std::get<E2eTest>(GetParam());
   auto threads = std::get<int>(GetParam());
 
-  // Ensure folder exists
-  std::filesystem::create_directory(folder);
-  auto fileName = folder + "/" + getTestName(test, threads) + ".p";
+  for (int repetition = 0; repetition < test.repetitions; repetition++) {
+    SCOPED_TRACE(std::format("repetition {}", repetition));
 
-  CliArgs args = {.target = fileName,
-                  .mode = CliMode::CompileAndInterpret,
-                  .threads = threads};
+    // Ensure folder exists
+    std::filesystem::create_directory(folder);
+    auto fileName = folder + "/" + getTestName(test, threads) + ".p";
 
-  // Create temp file with code
-  std::ofstream fileStream(fileName);
-  fileStream << test.code;
-  fileStream.close();
+    CliArgs args = {.target = fileName,
+                    .mode = CliMode::CompileAndInterpret,
+                    .threads = threads};
 
-  DISABLE_COUT
-  EXPECT_EQ(executeCommand(args), ExitCode::Ok);
-  auto output = REENABLE_COUT;
+    // Create temp file with code
+    std::ofstream fileStream(fileName);
+    fileStream << test.code;
+    fileStream.close();
 
-  std::filesystem::remove(fileName);
+    DISABLE_COUT
+    EXPECT_EQ(executeCommand(args), ExitCode::Ok);
+    auto output = REENABLE_COUT;
 
-  auto splitOut = split(output, '\n');
+    std::filesystem::remove(fileName);
 
-  EXPECT_TRUE(EqualSize(splitOut, test.output));
-  
-  for (auto line : test.output) {
-    EXPECT_TRUE(Contains(splitOut, line));
+    auto splitOut = split(output, '\n');
+
+    EXPECT_TRUE(EqualSize(splitOut, test.output));
+
+    for (auto line : test.output) {
+      EXPECT_TRUE(Contains(splitOut, line));
+    }
   }
 }
 

@@ -512,6 +512,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
     break;
   }
   case InstructionType::GoTo: {
+    std::lock_guard<std::mutex> dependencyStateLock(dependencyStateMutex);
     int dist = std::get<int>(instr.bytecodeArgs[0].val);
 
     if (dist > 0)
@@ -773,8 +774,20 @@ void Executor::execSingleInstruction(Instruction &instr) {
   instr.executed = true;
 
   if (updateDeps) {
+    std::lock_guard<std::mutex> dependencyStateLock(dependencyStateMutex);
+    // GoTo resets the dependency state for an entire loop. If it is queued
+    // before this instruction has finished publishing its other dependents, a
+    // different worker can start that reset while those updates are still in
+    // flight. Publish loop-back edges last so reaching a GoTo means all other
+    // dependency updates from this instruction are complete.
     for (auto dep : instr.dependents) {
+      if (dep.instr->type == InstructionType::GoTo)
+        continue;
       updateDependency(dep, result);
+    }
+    for (auto dep : instr.dependents) {
+      if (dep.instr->type == InstructionType::GoTo)
+        updateDependency(dep, result);
     }
   }
 
