@@ -29,6 +29,7 @@ ExitCode executeBytecode(const CliArgs &args, std::istream &bytecode,
   }
 
   try {
+    // Subprogram owns the parsed instruction buffer from this point onward.
     auto instructionStore =
         std::make_shared<std::vector<Instruction>>(std::move(instructions));
     auto program = std::make_shared<Subprogram>(instructionStore);

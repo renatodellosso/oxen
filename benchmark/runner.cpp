@@ -44,6 +44,7 @@ TrialResult runTrial(const Program &program, int threads) {
   auto runStart = Clock::now();
   ExitCode executionExit;
   {
+    // Program output would otherwise be mixed into the benchmark report.
     std::ostringstream ignoredOutput;
     ScopedStreamRedirect redirect(std::cout, ignoredOutput.rdbuf());
     executionExit = executeBytecode(args, bytecodeStream, &stats);

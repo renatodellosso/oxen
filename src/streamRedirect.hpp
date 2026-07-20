@@ -2,6 +2,7 @@
 
 #include <ostream>
 
+// Restores the original stream buffer when the redirect leaves scope.
 class ScopedStreamRedirect {
   std::ostream &stream;
   std::streambuf *original;
