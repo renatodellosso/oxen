@@ -1,131 +1,132 @@
 #include "tests.hpp"
 
-// NOTE: Expecting the same line multiple times will not work!
-
 std::vector<E2eTest> tests = {
     // Print statements
-    {"PrintWorksWithNumbers", "print 1;", {"1"}},
-    {"PrintWorksWithStrings", "print \"abc\";", {"abc"}},
-    {"PrintWorksWithBools", "print true;", {"true"}},
-    {"PrintWorksWithMultiplePrints", "print 2;\nprint false;", {"false", "2"}},
+    {"PrintWorksWithNumbers", "print 1;", ExpectUnordered({"1"})},
+    {"PrintWorksWithStrings", "print \"abc\";", ExpectUnordered({"abc"})},
+    {"PrintWorksWithBools", "print true;", ExpectUnordered({"true"})},
+    {"PrintWorksWithMultiplePrints", "print 2;\nprint false;", ExpectUnordered({"false", "2"})},
 
     // Addition
-    {"AdditionWorksWithNumbers", "print 1 + 2;", {"3"}},
-    {"AdditionWorksWithThreeNumbers", "print 1 + 1 + 1;", {"3"}},
-    {"AdditionWorksWithStrings", "print \"a\" + \"b\";", {"ab"}},
-    {"AdditionWorksWithBools", "print false + true;", {"true"}},
-    {"AdditionWorksWithMixedTypes", "print 1 + \"b\" + true;", {"1btrue"}},
+    {"AdditionWorksWithNumbers", "print 1 + 2;", ExpectUnordered({"3"})},
+    {"AdditionWorksWithThreeNumbers", "print 1 + 1 + 1;", ExpectUnordered({"3"})},
+    {"AdditionWorksWithStrings", "print \"a\" + \"b\";", ExpectUnordered({"ab"})},
+    {"AdditionWorksWithBools", "print false + true;", ExpectUnordered({"true"})},
+    {"AdditionWorksWithMixedTypes", "print 1 + \"b\" + true;", ExpectUnordered({"1btrue"})},
 
     // Subtraction
-    {"SubtractionWorks", "print 1 - 1;", {"0"}},
-    {"SubtractionWorksWithThreeNumbers", "print 1 - 1 - 2;", {"2"}},
-    {"SubtractionWorksWithNegativeNumbers", "print 1 - -1;", {"2"}},
+    {"SubtractionWorks", "print 1 - 1;", ExpectUnordered({"0"})},
+    {"SubtractionWorksWithThreeNumbers", "print 1 - 1 - 2;", ExpectUnordered({"2"})},
+    {"SubtractionWorksWithNegativeNumbers", "print 1 - -1;", ExpectUnordered({"2"})},
 
     // Multiplication
-    {"MultiplicationWorks", "print 2 * 2;", {"4"}},
-    {"MultiplicationWithThreeNumbers", "print 2 * 3 * 2;", {"12"}},
-    {"MultiplicationWorksWithNegativeNumbers", "print 1 * -1;", {"-1"}},
+    {"MultiplicationWorks", "print 2 * 2;", ExpectUnordered({"4"})},
+    {"MultiplicationWithThreeNumbers", "print 2 * 3 * 2;", ExpectUnordered({"12"})},
+    {"MultiplicationWorksWithNegativeNumbers", "print 1 * -1;", ExpectUnordered({"-1"})},
 
     // Division
-    {"DivisionWorksWhenCleanlyDivisible", "print 4 / 2;", {"2"}},
-    {"DivisionWorksWhenNotCleanlyDivisible", "print 3 / 2;", {"1"}},
-    {"DivisionWorksWithNegativeNumbers", "print 1 / -1;", {"-1"}},
+    {"DivisionWorksWhenCleanlyDivisible", "print 4 / 2;", ExpectUnordered({"2"})},
+    {"DivisionWorksWhenNotCleanlyDivisible", "print 3 / 2;", ExpectUnordered({"1"})},
+    {"DivisionWorksWithNegativeNumbers", "print 1 / -1;", ExpectUnordered({"-1"})},
+    {"DivisionByZeroReportsRuntimeError",
+     "print 1 / 0;",
+     ExpectError(ExitCode::ExecutionError, "Division by zero")},
 
     // Equality
-    {"EqualityWorksWithEqualNumbers", "print 1 == 1;", {"true"}},
-    {"EqualityWorksWithUnequalNumbers", "print 1 == 2;", {"false"}},
-    {"EqualityWorksWithEqualStrings", "print \"a\" == \"a\";", {"true"}},
-    {"EqualityWorksWithUnequalStrings", "print \"a\" == \"b\";", {"false"}},
-    {"EqualityWorksWithEqualBools", "print true == true;", {"true"}},
-    {"EqualityWorksWithUnequalBools", "print true == false;", {"false"}},
-    {"EqualityDefaultsToFalseForMixedTypes", "print 1 == true;", {"false"}},
+    {"EqualityWorksWithEqualNumbers", "print 1 == 1;", ExpectUnordered({"true"})},
+    {"EqualityWorksWithUnequalNumbers", "print 1 == 2;", ExpectUnordered({"false"})},
+    {"EqualityWorksWithEqualStrings", "print \"a\" == \"a\";", ExpectUnordered({"true"})},
+    {"EqualityWorksWithUnequalStrings", "print \"a\" == \"b\";", ExpectUnordered({"false"})},
+    {"EqualityWorksWithEqualBools", "print true == true;", ExpectUnordered({"true"})},
+    {"EqualityWorksWithUnequalBools", "print true == false;", ExpectUnordered({"false"})},
+    {"EqualityDefaultsToFalseForMixedTypes", "print 1 == true;", ExpectUnordered({"false"})},
     {"EqualityWorksInConditions",
      "int count = 0;\n"
      "if (count == 0) print \"done\";",
-     {"done"}},
+     ExpectUnordered({"done"})},
 
     // Inequality
-    {"InequalityWorksWithUnequalNumbers", "print 1 != 2;", {"true"}},
-    {"InequalityWorksWithEqualNumbers", "print 1 != 1;", {"false"}},
-    {"InequalityWorksWithUnequalStrings", "print \"a\" != \"b\";", {"true"}},
-    {"InequalityWorksWithEqualStrings", "print \"a\" != \"a\";", {"false"}},
-    {"InequalityWorksWithBools", "print true != false;", {"true"}},
-    {"InequalityDefaultsToTrueForMixedTypes", "print 1 != true;", {"true"}},
+    {"InequalityWorksWithUnequalNumbers", "print 1 != 2;", ExpectUnordered({"true"})},
+    {"InequalityWorksWithEqualNumbers", "print 1 != 1;", ExpectUnordered({"false"})},
+    {"InequalityWorksWithUnequalStrings", "print \"a\" != \"b\";", ExpectUnordered({"true"})},
+    {"InequalityWorksWithEqualStrings", "print \"a\" != \"a\";", ExpectUnordered({"false"})},
+    {"InequalityWorksWithBools", "print true != false;", ExpectUnordered({"true"})},
+    {"InequalityDefaultsToTrueForMixedTypes", "print 1 != true;", ExpectUnordered({"true"})},
 
     // Ordered comparisons
-    {"LessThanWorksWithNumbers", "print 1 < 2;", {"true"}},
-    {"LessThanWorksWithNumbersFalse", "print 2 < 1;", {"false"}},
-    {"LessThanEqualsWorksWithNumbers", "print 2 <= 2;", {"true"}},
-    {"GreaterThanWorksWithNumbers", "print 2 > 1;", {"true"}},
-    {"GreaterThanEqualsWorksWithNumbers", "print 2 >= 2;", {"true"}},
-    {"LessThanComparesStringsAlphabetically", "print \"a\" < \"b\";", {"true"}},
+    {"LessThanWorksWithNumbers", "print 1 < 2;", ExpectUnordered({"true"})},
+    {"LessThanWorksWithNumbersFalse", "print 2 < 1;", ExpectUnordered({"false"})},
+    {"LessThanEqualsWorksWithNumbers", "print 2 <= 2;", ExpectUnordered({"true"})},
+    {"GreaterThanWorksWithNumbers", "print 2 > 1;", ExpectUnordered({"true"})},
+    {"GreaterThanEqualsWorksWithNumbers", "print 2 >= 2;", ExpectUnordered({"true"})},
+    {"LessThanComparesStringsAlphabetically", "print \"a\" < \"b\";", ExpectUnordered({"true"})},
     {"GreaterThanComparesStringsAlphabetically",
      "print \"b\" > \"a\";",
-     {"true"}},
+     ExpectUnordered({"true"})},
     {"LessThanEqualsComparesStringsAlphabetically",
      "print \"a\" <= \"a\";",
-     {"true"}},
+     ExpectUnordered({"true"})},
     {"GreaterThanEqualsComparesStringsAlphabetically",
      "print \"b\" >= \"a\";",
-     {"true"}},
+     ExpectUnordered({"true"})},
     {"OrderedComparisonsWorkInConditions",
      "if (\"a\" < \"b\") print \"ordered\";",
-     {"ordered"}},
+     ExpectUnordered({"ordered"})},
 
     // Variables
-    {"VariablesCanBeDeclared", "int a;", {}},
-    {"VariablesCanBeDeclaredAndInitialized", "int a = 1;\nprint a;", {"1"}},
-    {"VariablesCanBeSet", "int a;\na = 1;\nprint a;", {"1"}},
+    {"VariablesCanBeDeclared", "int a;", ExpectUnordered({})},
+    {"VariablesCanBeDeclaredAndInitialized", "int a = 1;\nprint a;", ExpectUnordered({"1"})},
+    {"VariablesCanBeSet", "int a;\na = 1;\nprint a;", ExpectUnordered({"1"})},
     {"VariablesCanBeSetMultipleTimes",
      "int a;\na = 1;\na = 2;\nprint a;",
-     {"2"}},
-    {"VariablesCanBeUsedInOperations", "int a = 1;\nprint a + 1;", {"2"}},
+     ExpectUnordered({"2"})},
+    {"VariablesCanBeUsedInOperations", "int a = 1;\nprint a + 1;", ExpectUnordered({"2"})},
     {"VariablesCanBeDeclaredMultipleTimes",
      "int a = 1;\nprint a;\nint b = 2;\nprint b;",
-     {"1", "2"}},
-    {"VariablesCanHaveBoolType", "bool a = true;\nprint a;", {"true"}},
-    {"VariablesCanHaveStringType", "string a = \"abc\";\nprint a;", {"abc"}},
+     ExpectUnordered({"1", "2"})},
+    {"VariablesCanHaveBoolType", "bool a = true;\nprint a;", ExpectUnordered({"true"})},
+    {"VariablesCanHaveStringType", "string a = \"abc\";\nprint a;", ExpectUnordered({"abc"})},
     {"VariablesCanBeUsedToUpdateThemselves",
      "int a = 1;\na = a + 1;\nprint a;",
-     {"2"}},
+     ExpectUnordered({"2"})},
 
     // If statements
-    {"IfsDontRunIfConditionIsFalse", "if (false) { print \"ran\"; }", {}},
-    {"IfsRunIfConditionIsTrue", "if (true) { print \"ran\"; }", {"ran"}},
-    {"IfsAllowImplicitBlocks", "if (true) print \"ran\";", {"ran"}},
-    {"IfsAllowComplexConditions", "if (1 + 1 - 1) print \"ran\";", {"ran"}},
+    {"IfsDontRunIfConditionIsFalse", "if (false) { print \"ran\"; }", ExpectUnordered({})},
+    {"IfsRunIfConditionIsTrue", "if (true) { print \"ran\"; }", ExpectUnordered({"ran"})},
+    {"IfsAllowImplicitBlocks", "if (true) print \"ran\";", ExpectUnordered({"ran"})},
+    {"IfsAllowComplexConditions", "if (1 + 1 - 1) print \"ran\";", ExpectUnordered({"ran"})},
     {"IfsAllowVariablesInCondition",
      "bool a = true;\nif (a) print \"ran\";",
-     {"ran"}},
+     ExpectUnordered({"ran"})},
     {"ElsesDoNotRunIfConditionIsTrue",
      "if (true) print \"then\"; else print \"else\";",
-     {"then"}},
+     ExpectUnordered({"then"})},
     {"ElsesRunIfConditionIsFalse",
      "if (false) print \"then\"; else print \"else\";",
-     {"else"}},
+     ExpectUnordered({"else"})},
     {"ElsesAllowBlocks",
      "if (false) { print \"then\"; } else { print \"else\"; }",
-     {"else"}},
+     ExpectUnordered({"else"})},
     {"ElseIfsRunFirstTrueBranch",
      "if (false) print \"if\";\n"
      "else if (true) print \"else if\";\n"
      "else print \"else\";",
-     {"else if"}},
+     ExpectUnordered({"else if"})},
     {"ElseIfsRunFinalElse",
      "if (false) print \"if\";\n"
      "else if (false) print \"else if\";\n"
      "else print \"else\";",
-     {"else"}},
+     ExpectUnordered({"else"})},
     {"ElsesSetVariablesFromThenBranch",
      "int a = 0;\n"
      "if (true) a = 1; else a = 2;\n"
      "print a;",
-     {"1"}},
+     ExpectUnordered({"1"})},
     {"ElsesSetVariablesFromElseBranch",
      "int a = 0;\n"
      "if (false) a = 1; else a = 2;\n"
      "print a;",
-     {"2"}},
+     ExpectUnordered({"2"})},
 
     // While loops
     {"WhileLoopsRunWhileConditionIsTrue",
@@ -134,13 +135,13 @@ std::vector<E2eTest> tests = {
      "print count;\n"
      "count = count - 1;\n"
      "}",
-     {"10", "9", "8", "7", "6", "5", "4", "3", "2", "1"}},
+     ExpectUnordered({"10", "9", "8", "7", "6", "5", "4", "3", "2", "1"})},
     {"WhileLoopsAllowImplicitBlocks",
      "int count = 10;\n"
      "while (count)\n"
      "count = count - 1;\n"
      "print count;",
-     {"0"}},
+     ExpectUnordered({"0"})},
     {"WhileLoopsCanBeInsideIfStatements",
      "if (true) {\n"
      "int a = 5;\n"
@@ -149,14 +150,14 @@ std::vector<E2eTest> tests = {
      "a = a - 1;\n"
      "}\n"
      "}",
-     {"1", "2", "3", "4", "5"}},
+     ExpectUnordered({"1", "2", "3", "4", "5"})},
     {"WhileLoopsUpdateConditionAcrossIterations",
      "int i = 0;\n"
      "while (i < 3) {\n"
      "i = i + 1;\n"
      "}\n"
      "print i;",
-     {"3"}},
+     ExpectUnordered({"3"})},
     {
         "WhileLoopsCanCountIterationsCorrectly",
         "int sum = 0;\n"
@@ -166,7 +167,7 @@ std::vector<E2eTest> tests = {
         "i = i + 1;\n"
         "}\n"
         "print sum;",
-        {"3"},
+        ExpectUnordered({"3"}),
     },
     {
         "WhileLoopsCanBeNestedAndCountIterationsCorrectly",
@@ -181,7 +182,7 @@ std::vector<E2eTest> tests = {
         "i = i + 1;\n"
         "}\n"
         "print sum;",
-        {"9"},
+        ExpectUnordered({"9"}),
     },
     {
         "NestedLoopsRunInnerLoopForEachOuterIteration",
@@ -196,7 +197,7 @@ std::vector<E2eTest> tests = {
         "i = i + 1;\n"
         "}\n"
         "print count;",
-        {"6"},
+        ExpectUnordered({"6"}),
     },
     {"WhileLoopsCanBeDoublyNestedAndCountIterationsCorrectly",
      "int sum = 0;\n"
@@ -214,7 +215,7 @@ std::vector<E2eTest> tests = {
      "i = i + 1;\n"
      "}\n"
      "print sum;",
-     {"24"}},
+     ExpectUnordered({"24"})},
     {"WhileLoopsCanBeNestedWhenTheyDontUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"
@@ -225,7 +226,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "i = i + 1;\n"
      "}\n",
-     {"j: 0", "j: 1", "j: 0", "j: 1", "j: 0", "j: 1"}},
+     ExpectUnordered({"j: 0", "j: 1", "j: 0", "j: 1", "j: 0", "j: 1"})},
     {"WhileLoopsCanBeDoublyNestedWhenTheyDontUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"
@@ -240,8 +241,8 @@ std::vector<E2eTest> tests = {
      "}\n"
      "i = i + 1;\n"
      "}\n",
-     {"k: 0", "k: 1", "k: 0", "k: 1", "k: 0", "k: 1", "k: 0", "k: 1", "k: 0",
-      "k: 1", "k: 0", "k: 1"}},
+     ExpectUnordered({"k: 0", "k: 1", "k: 0", "k: 1", "k: 0", "k: 1", "k: 0", "k: 1", "k: 0",
+      "k: 1", "k: 0", "k: 1"})},
     {"LoopBackWaitsForDependencyPublication",
      "int i = 0;\n"
      "while (i < 10) {\n"
@@ -256,14 +257,14 @@ std::vector<E2eTest> tests = {
      "}\n"
      "i = i + 1;\n"
      "}\n",
-     [] {
+     ExpectUnordered([] {
        std::vector<std::string> output;
        for (int i = 0; i < 10; i++)
          for (int j = 0; j < 5; j++)
            for (int k = 0; k < 3; k++)
              output.push_back("k: " + std::to_string(k));
        return output;
-     }()},
+     }())},
     {"WhileLoopsCanBeNestedWhenTheyUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"
@@ -274,7 +275,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "i = i + 1;\n"
      "}\n",
-     {"0 0", "0 1", "1 0", "1 1", "2 0", "2 1"}},
+     ExpectUnordered({"0 0", "0 1", "1 0", "1 1", "2 0", "2 1"})},
     {"WhileLoopsCanBeDoublyNestedWhenTheyUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"
@@ -289,43 +290,43 @@ std::vector<E2eTest> tests = {
      "}\n"
      "i = i + 1;\n"
      "}\n",
-     {"0 0 0", "0 0 1", "0 1 0", "0 1 1", "1 0 0", "1 0 1", "1 1 0", "1 1 1",
-      "2 0 0", "2 0 1", "2 1 0", "2 1 1"}},
+     ExpectUnordered({"0 0 0", "0 0 1", "0 1 0", "0 1 1", "1 0 0", "1 0 1", "1 1 0", "1 1 1",
+      "2 0 0", "2 0 1", "2 1 0", "2 1 1"})},
 
     // Functions
-    {"FunctionsCanBeDeclared", "void main() { print 1; }", {}},
+    {"FunctionsCanBeDeclared", "void main() { print 1; }", ExpectUnordered({})},
     {"FunctionsCanBeDeclaredWithParameters",
      "void main(int a, string b) { print 1; }",
-     {}},
-    {"FunctionsCanBeDeclaredWithReturnType", "int main() { print 1; }", {}},
+     ExpectUnordered({})},
+    {"FunctionsCanBeDeclaredWithReturnType", "int main() { print 1; }", ExpectUnordered({})},
     {"FunctionsCanBeDeclaredWithReturnTypeAndParameters",
      "int main(int a, string b) { print 1; }",
-     {}},
+     ExpectUnordered({})},
     {"FunctionsCanBeDeclaredWhileUsingParametersInBodies",
      "int main(int a, string b) { print a + b; }",
-     {}},
+     ExpectUnordered({})},
     {"FunctionsCanBeDeclaredMultipleTimes",
      "void main() { print 1; }\n"
      "void extra() { print 2; }",
-     {}},
+     ExpectUnordered({})},
     {"FunctionsCanBeDeclaredInsideFunctions",
      "void main() { \n"
      "void extra() { print 2; }\n"
      "}",
-     {}},
+     ExpectUnordered({})},
     {"FunctionsCanBeDeclaredInsideMultipleFunctions",
      "void main() { \n"
      "void extra() { \n"
      "void extra2() { print 2; }\n"
      " }\n"
      "}",
-     {}},
+     ExpectUnordered({})},
     {"FunctionsCanShadowVariablesWithParameters",
      "int a;\n"
      "void main(int a) { \n"
      "print a;"
      "}",
-     {}},
+     ExpectUnordered({})},
 
     // Calls
     {"CallsCallFunctions",
@@ -333,14 +334,14 @@ std::vector<E2eTest> tests = {
      "print \"Func!\";\n"
      "}\n"
      "main();",
-     {"Func!"}},
+     ExpectUnordered({"Func!"})},
     {"CallsCanCallFunctionsMultipleTimes",
      "void main() { \n"
      "print \"Func!\";\n"
      "}\n"
      "main();\n"
      "main();",
-     {"Func!", "Func!"}},
+     ExpectUnordered({"Func!", "Func!"})},
     {"CallsCanCallDifferentFunctions",
      "void a() { \n"
      "print \"A\";\n"
@@ -350,7 +351,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "a();\n"
      "b();",
-     {"A", "B"}},
+     ExpectUnordered({"A", "B"})},
     {"CallsCanCallFunctionsWithIfStatementsInside",
      "void main() { \n"
      "if (true)\n"
@@ -359,7 +360,7 @@ std::vector<E2eTest> tests = {
      "print \"B\";\n"
      "}\n"
      "main();",
-     {"A"}},
+     ExpectUnordered({"A"})},
     {"CallsCanCallFunctionsWithWhileStatementsInside",
      "void main() { \n"
      "int a = 5;\n"
@@ -369,7 +370,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "}\n"
      "main();",
-     {"5", "4", "3", "2", "1"}},
+     ExpectUnordered({"5", "4", "3", "2", "1"})},
     {"CallsCanCallFunctionsRecursively",
      "bool recurse = true;\n"
      "void main() {\n"
@@ -380,7 +381,7 @@ std::vector<E2eTest> tests = {
      "}"
      "}\n"
      "main();",
-     {"true", "false"}},
+     ExpectUnordered({"true", "false"})},
     {"CallsAreSequencedCorrectly",
      "int a = 0;\n"
      "void main() {\n"
@@ -391,7 +392,7 @@ std::vector<E2eTest> tests = {
      "main();\n"
      "a = a + 1;\n"
      "main();\n",
-     {"0", "1", "2"}},
+     ExpectOrdered({"0", "1", "2"})},
     {"CallsAreSequencedCorrectlyWhenWritesAreInCalls",
      "int a = 0;\n"
      "void main() {\n"
@@ -399,13 +400,13 @@ std::vector<E2eTest> tests = {
      "}\n"
      "main();\n"
      "print a;\n",
-     {"1"}},
+     ExpectUnordered({"1"})},
     {"CallsWorkWithArguments",
      "void add(int a, int b) {\n"
      "print a + b;\n"
      "}\n"
      "add(1, 2);",
-     {"3"}},
+     ExpectUnordered({"3"})},
     {"CallsWithArgumentsDoNotShareParameterScopes",
      "void printArg(int a) {\n"
      "print a;\n"
@@ -413,7 +414,7 @@ std::vector<E2eTest> tests = {
      "printArg(1);\n"
      "printArg(2);\n"
      "printArg(3);",
-     {"1", "2", "3"}},
+     ExpectUnordered({"1", "2", "3"})},
     {"CallsWorkFromEnclosedFunctionsToEnclosingFunctions",
      "void outer(int x) {\n"
      "void inner(bool y) {\n"
@@ -425,21 +426,21 @@ std::vector<E2eTest> tests = {
      "print x + 1;\n"
      "}\n"
      "outer(5);\n",
-     {"-1", "1", "4", "6"}},
+     ExpectUnordered({"-1", "1", "4", "6"})},
     {"CallsCanCallFunctionsInsideFunctions",
      "void main() { \n"
      "void extra() { print 2; }\n"
      "extra();\n"
      "}\n"
      "main();",
-     {"2"}},
+     ExpectUnordered({"2"})},
     {"CallsCanCallFunctionsInsideFunctionsWithArguments",
      "void main(int a) { \n"
      "void extra(int b) { print a + b; }\n"
      "extra(2);\n"
      "}\n"
      "main(3);",
-     {"5"}},
+     ExpectUnordered({"5"})},
     {"CallsCanCallFunctionsInsideMultipleFunctions",
      "void main() { \n"
      "void extra() { \n"
@@ -449,7 +450,7 @@ std::vector<E2eTest> tests = {
      "extra();\n"
      "}\n"
      "main();",
-     {"2"}},
+     ExpectUnordered({"2"})},
     {"CallsCanCallFunctionsInsideMultipleFunctionsWithArguments",
      "void main(int a) { \n"
      "void extra(int b) { \n"
@@ -459,9 +460,9 @@ std::vector<E2eTest> tests = {
      "extra(2);\n"
      "}\n"
      "main(1);",
-     {"6"}},
+     ExpectUnordered({"6"})},
 
-    {"ReturnsWork", "int main() { return 1; }\nprint main();", {"1"}},
+    {"ReturnsWork", "int main() { return 1; }\nprint main();", ExpectUnordered({"1"})},
     {"ReturnsWorkWithMultipleCalls",
      "int main(bool a) {\n"
      "if (a) return 1;\n"
@@ -469,7 +470,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print main(true);\n"
      "print main(false);",
-     {"1", "2"}},
+     ExpectUnordered({"1", "2"})},
     {"ReturnsWorkWithEnclosedFunctions",
      "void outer() {\n"
      "void inner() {\n"
@@ -479,7 +480,7 @@ std::vector<E2eTest> tests = {
      "print \"done\";\n"
      "}\n"
      "outer();",
-     {"1", "done"}},
+     ExpectUnordered({"1", "done"})},
     {"ReturnsWorkWithMultipleReturnStatementsInOneFunction",
      "int main(int a) {\n"
      "if (a == 0) return 1;\n"
@@ -487,7 +488,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print main(0);\n"
      "print main(1);\n",
-     {"1", "2"}},
+     ExpectUnordered({"1", "2"})},
     {"ReturnsUseFirstExecutedReturnStatement",
      "int main() {\n"
      "return 1;\n"
@@ -495,7 +496,7 @@ std::vector<E2eTest> tests = {
      "return 2;\n"
      "}\n"
      "print main();",
-     {"1", "done"}},
+     ExpectUnordered({"1", "done"})},
     {"ReturnsRunLaterSideEffectsWithoutOverwritingReturnValue",
      "int a = 0;\n"
      "int main() {\n"
@@ -505,7 +506,7 @@ std::vector<E2eTest> tests = {
      "}\n"
      "print main();\n"
      "print a;",
-     {"1", "5"}},
+     ExpectUnordered({"1", "5"})},
     {"ReturnsDoNotShareStateAcrossRepeatedArgumentCalls",
      "int id(int a) {\n"
      "return a;\n"
@@ -513,12 +514,13 @@ std::vector<E2eTest> tests = {
      "print id(10);\n"
      "print id(20);\n"
      "print id(30);",
-     {"10", "20", "30"}},
+     ExpectUnordered({"10", "20", "30"})},
     {"ReturnsDoNotEndFunctionsPrematurely",
      "int main() {\n"
      "return 0;\n"
      "print \"done\";\n"
      "}\n"
      "print main();",
-     {"0", "done"}},
+     ExpectUnordered({"0", "done"})},
+
 };

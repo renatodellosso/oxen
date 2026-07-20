@@ -1,84 +1,22 @@
 #include "../../src/cli.hpp"
 #include "../testUtils.hpp"
 #include "tests.hpp"
-#include <gmock/gmock.h>
-#include "gtest/gtest.h"
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <gtest/gtest.h>
-#include <sstream>
 #include <string>
-#include <vector>
 
 // Int is thread count
 class E2EFixture : public testing::TestWithParam<std::tuple<E2eTest, int>> {};
 
 const std::string folder = "temp";
 
-std::string getTestName(E2eTest test, int threads) {
+std::string getTestName(const E2eTest &test, int threads) {
   return test.name + std::to_string(threads);
 }
 
-std::vector<std::string> split(std::string str, char delimiter) {
-  std::vector<std::string> vec;
-
-  std::string temp;
-  std::stringstream stream(str);
-
-  while (std::getline(stream, temp, delimiter))
-    vec.push_back(temp);
-
-  return vec;
-}
-
-std::string vectorToString(std::vector<std::string> vector) {
-  std::string str = "";
-
-  for (int i = 0; i < vector.size(); i++) {
-    str += "'" + vector[i] + "'";
-    if (i < vector.size() - 1)
-      str += ", ";
-  }
-
-  return str;
-}
-
-testing::AssertionResult Contains(std::vector<std::string> vector,
-                                  std::string line) {
-  if (std::ranges::find(vector, line) == vector.end())
-    return testing::AssertionFailure()
-           << "Vector did not contain '" << line
-           << "'. Vector: " << vectorToString(vector);
-  return testing::AssertionSuccess() << "Vector contained '" << line
-                                     << "'. Vector: " << vectorToString(vector);
-}
-
-testing::AssertionResult EqualSize(std::vector<std::string> actual,
-                                   std::vector<std::string> expected) {
-  std::string expectedStr = "";
-  for (auto str : expected)
-    expectedStr += "\"" + str + "\", ";
-  if (!expected.empty())
-    expectedStr.erase(expectedStr.end() - 2); // Remove trailing ', '
-
-  std::string actualStr = "";
-  for (auto str : actual)
-    actualStr += "\"" + str + "\", ";
-  if (!actual.empty())
-    actualStr.erase(actualStr.end() - 2); // Remove trailing ', '
-
-  std::string message = std::format(
-      "Expected size: {}, Actual size: {}, Expected: {}, Actual: {}",
-      expected.size(), actual.size(), expectedStr, actualStr);
-
-  if (actual.size() == expected.size())
-    return testing::AssertionSuccess() << message;
-  return testing::AssertionFailure() << message;
-}
-
 TEST_P(E2EFixture, E2E) {
-  auto test = std::get<E2eTest>(GetParam());
+  const auto &test = std::get<E2eTest>(GetParam());
   auto threads = std::get<int>(GetParam());
 
   // Ensure folder exists
@@ -95,30 +33,12 @@ TEST_P(E2EFixture, E2E) {
   fileStream.close();
 
   DISABLE_COUT
-  EXPECT_EQ(executeCommand(args), ExitCode::Ok);
+  auto exitCode = executeCommand(args);
   auto output = REENABLE_COUT;
 
   std::filesystem::remove(fileName);
 
-  auto splitOut = split(output, '\n');
-
-  EXPECT_THAT(splitOut, testing::UnorderedElementsAreArray(test.output));
-}
-
-TEST(E2EErrors, DivisionByZeroReportsRuntimeError) {
-  std::filesystem::create_directory(folder);
-  const std::string fileName = folder + "/DivisionByZero.p";
-  std::ofstream(fileName) << "print 1 / 0;";
-  CliArgs args = {.target = fileName,
-                  .mode = CliMode::CompileAndInterpret,
-                  .threads = 1};
-
-  DISABLE_COUT
-  EXPECT_EQ(executeCommand(args), ExitCode::ExecutionError);
-  auto output = REENABLE_COUT;
-  std::filesystem::remove(fileName);
-
-  EXPECT_THAT(output, testing::HasSubstr("Division by zero"));
+  test.validate(exitCode, output);
 }
 
 INSTANTIATE_TEST_SUITE_P(
