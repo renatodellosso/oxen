@@ -5,6 +5,7 @@
 #include "../testUtils.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <format>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -290,6 +291,7 @@ Instruction getFuncInstr() {
   funcInstr.bytecodeArgs = {
       {ValueType::Identifier, "int"},
       {ValueType::Identifier, "func"},
+      {ValueType::Bool, true},
 
       // Params
       {ValueType::Integer, 2},
@@ -371,6 +373,7 @@ TEST(startExecution, initsFunctions) {
             std::get<std::string>(funcInstr.bytecodeArgs[0].val));
   EXPECT_EQ(func->getName(),
             std::get<std::string>(funcInstr.bytecodeArgs[1].val));
+  EXPECT_TRUE(func->isGeneratedLoopBody());
 
   REENABLE_COUT
 }
@@ -519,5 +522,45 @@ TEST(startExecution, waitsForTerminalCallSideEffectsAfterDependencyRemapping) {
   std::istringstream outputStream(output);
   for (std::string line; std::getline(outputStream, line);)
     actual.push_back(line);
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(startExecution, waitsForCallsInsideLoopIterations) {
+  constexpr int iterations = 16;
+  std::string source =
+      "void printValue(int value) { print value; }\n"
+      "int i = 0;\n" + std::format("while (i < {}) {{\n", iterations) +
+      "printValue(i);\n"
+      "i = i + 1;\n"
+      "}\n";
+
+  CliArgs args = {.mode = CliMode::CompileAndInterpret, .threads = 16};
+  std::istringstream sourceStream(source);
+  std::string bytecode;
+  ASSERT_EQ(compileToBytecode(args, sourceStream, bytecode), ExitCode::Ok);
+
+  std::vector<Instruction> instructions;
+  std::istringstream bytecodeStream(bytecode);
+  BytecodeParser parser(args, instructions, bytecodeStream);
+  parser.buildInstructions();
+
+  auto instrs =
+      std::make_shared<std::vector<Instruction>>(std::move(instructions));
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor(args, *program);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  auto output = REENABLE_COUT
+
+  std::vector<std::string> actual;
+  std::istringstream outputStream(output);
+  for (std::string line; std::getline(outputStream, line);)
+    actual.push_back(line);
+
+  std::vector<std::string> expected;
+  for (int i = 0; i < iterations; i++)
+    expected.push_back(std::to_string(i));
   EXPECT_EQ(actual, expected);
 }

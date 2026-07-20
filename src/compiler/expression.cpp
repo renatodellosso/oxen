@@ -403,13 +403,12 @@ void FunctionExpression::findReturnStatements() {
   }
 }
 
-// Bytecode params are in format "[returnType] [name] [# of params] [param i
-// type] [param i name] [first uses] [first writes] [last uses] [last
-// writes]"
+// Bytecode params are in format "[returnType] [name] [generated loop body]".
 std::string FunctionExpression::toByteCode(CliArgs args) const {
   // Subtract 1 from count to exclude this instruction
-  std::string str =
-      Expression::toByteCode(args) + " " + returnType + " " + name + "\n";
+  std::string str = Expression::toByteCode(args) + " " + returnType + " " +
+                    name + " " +
+                    (generatedLoopBody ? "true" : "false") + "\n";
 
   str += body->toByteCode(args);
 

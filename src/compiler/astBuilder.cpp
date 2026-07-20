@@ -461,8 +461,8 @@ void AstBuilder::postProcessWhileLoop(
   jump->dependentRedirect = whileInstruction.get();
 
   // Make function
-  auto func =
-      std::make_unique<FunctionExpression>("_body", "void", loop->lineNumber);
+  auto func = std::make_unique<FunctionExpression>("_body", "void",
+                                                   loop->lineNumber, true);
 
   // Make call
   auto funcName = std::make_unique<RootExpression>(

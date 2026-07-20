@@ -115,9 +115,58 @@ getCompletionInstructionIds(std::shared_ptr<Subprogram> program) {
     // release that continuation when the nested invocation actually ends.
     if (!hasInternalDependent)
       ids.push_back(i);
+
+    if (instr.type == InstructionType::Function) {
+      // A declaration executes in this invocation, but its body does not. The
+      // nested Call clones that body and propagates its own completion signal.
+      auto &nestedBody = program->at(i + 1);
+      i += std::get<int>(nestedBody.bytecodeArgs[0].val) + 1;
+    }
   }
 
   return ids;
+}
+
+static std::unordered_set<int>
+getStableCompletionInstructionIds(std::shared_ptr<Subprogram> program,
+                                  const std::vector<int> &instructionIds) {
+  std::unordered_set<int> ids(instructionIds.begin(), instructionIds.end());
+
+  for (const auto &instr : *program) {
+    if (instr.type != InstructionType::GoTo)
+      continue;
+
+    int conditionId = instr.id + std::get<int>(instr.bytecodeArgs[0].val);
+    if (conditionId < 0)
+      continue;
+    int whileId = conditionId;
+    while (whileId < instr.id &&
+           program->at(whileId).type != InstructionType::While)
+      whileId++;
+    if (whileId >= instr.id ||
+        program->at(whileId).type != InstructionType::While)
+      continue;
+
+    bool hasRepeatingSignal = false;
+    for (int id = conditionId; id <= instr.id; id++) {
+      if (ids.erase(id) > 0)
+        hasRepeatingSignal = true;
+    }
+
+    // While only publishes non-block dependents when its condition is false,
+    // so it provides one stable signal after the entire GoTo cycle finishes.
+    if (hasRepeatingSignal)
+      ids.insert(whileId);
+  }
+
+  return ids;
+}
+
+static bool releasesGoTo(const InstrDependent &dependent) {
+  const InstrDependent *current = &dependent;
+  while (current->callCompletion)
+    current = &current->callCompletion->dependent;
+  return current->instr->type == InstructionType::GoTo;
 }
 
 static std::runtime_error
@@ -689,8 +738,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
     auto callInvocationId = nextCallInvocationId.fetch_add(1);
 
     if (cliArgs.verbose) {
-      log(LOCATION, "Calling function '{}' with {} instructions",
-          func->getName(), body->size());
+      log(LOCATION,
+          "Calling function '{}' with {} instructions (generated loop body: "
+          "{})",
+          func->getName(), body->size(), func->isGeneratedLoopBody());
     }
 
     auto &block = body->at(0);
@@ -703,30 +754,13 @@ void Executor::execSingleInstruction(Instruction &instr) {
     auto remaps = res.first;
     std::vector<std::pair<InstrDependent, std::vector<int>>>
         remappedDependencies;
-    // While loops are lowered to an internal _body function whose GoTo reset
-    // protocol still counts remapped resource edges individually.
-    bool usesCompletionBarrier = func->getName() != "_body";
-
     for (auto remap : remaps) {
       auto &dependent = instr.dependents[remap.first];
       auto remappedDependent = dependent;
       remappedDependent.disabled = false;
 
-      if (usesCompletionBarrier) {
-        dependent.completionBarrierRemapped = true;
-        remappedDependencies.emplace_back(remappedDependent, remap.second);
-      } else {
-        bool directDependencyExists = !dependent.disabled;
-        for (auto dependencyIndex : remap.second)
-          body->at(dependencyIndex)
-              .dependents.push_back(remappedDependent);
-
-        if (directDependencyExists) {
-          std::lock_guard<std::mutex> fulfilledLock(
-              depsFulfilledMutexes[dependent.instr->id]);
-          dependent.instr->depCount += remap.second.size() - 1;
-        }
-      }
+      dependent.completionBarrierRemapped = true;
+      remappedDependencies.emplace_back(remappedDependent, remap.second);
 
       if (cliArgs.verbose)
         log(LOCATION,
@@ -825,7 +859,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
       }
     }
 
-    auto completionIds = getCompletionInstructionIds(body);
+    auto completionIds = getStableCompletionInstructionIds(
+        body, getCompletionInstructionIds(body));
 
     auto attachCompletionBarrier =
         [&](InstrDependent dependent,
@@ -854,9 +889,10 @@ void Executor::execSingleInstruction(Instruction &instr) {
         };
 
     for (auto &[dependent, dependencyIds] : remappedDependencies) {
-      std::unordered_set<int> barrierIds(completionIds.begin(),
-                                         completionIds.end());
-      barrierIds.insert(dependencyIds.begin(), dependencyIds.end());
+      dependencyIds.insert(dependencyIds.end(), completionIds.begin(),
+                           completionIds.end());
+      auto barrierIds =
+          getStableCompletionInstructionIds(body, dependencyIds);
       attachCompletionBarrier(dependent, barrierIds);
     }
 
@@ -921,12 +957,12 @@ void Executor::execSingleInstruction(Instruction &instr) {
     // flight. Publish loop-back edges last so reaching a GoTo means all other
     // dependency updates from this instruction are complete.
     for (auto dep : instr.dependents) {
-      if (dep.instr->type == InstructionType::GoTo)
+      if (releasesGoTo(dep))
         continue;
       updateDependency(dep, result);
     }
     for (auto dep : instr.dependents) {
-      if (dep.instr->type == InstructionType::GoTo)
+      if (releasesGoTo(dep))
         updateDependency(dep, result);
     }
   }

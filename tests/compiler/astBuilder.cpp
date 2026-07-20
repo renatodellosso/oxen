@@ -394,6 +394,10 @@ TEST(AstBuilder, buildsWhileStatements) {
   ASSERT_EQ(outerBlock->expressions.size(), 3);
 
   EXPECT_EQ(outerBlock->expressions.at(0)->type, InstructionType::Function);
+  auto loopFunction = std::dynamic_pointer_cast<FunctionExpression>(
+      outerBlock->expressions.at(0));
+  ASSERT_NE(loopFunction, nullptr);
+  EXPECT_TRUE(loopFunction->generatedLoopBody);
   auto whileStatement = outerBlock->expressions.at(1);
   EXPECT_EQ(whileStatement->type, InstructionType::While);
   EXPECT_EQ(outerBlock->completionExpression, whileStatement);

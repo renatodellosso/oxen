@@ -184,6 +184,7 @@ struct Resource;
 struct FunctionExpression : public Expression {
   std::string name;
   std::string returnType;
+  bool generatedLoopBody;
   std::vector<FunctionExprParameter> params;
   std::shared_ptr<Expression> body;
 
@@ -212,11 +213,12 @@ struct FunctionExpression : public Expression {
   std::vector<std::reference_wrapper<Expression>> returnStatements;
 
   FunctionExpression() : FunctionExpression("unnamed_func", "void", 0) {}
-  FunctionExpression(std::string name, std::string returnType, int lineNumber)
+  FunctionExpression(std::string name, std::string returnType, int lineNumber,
+                     bool generatedLoopBody = false)
       : Expression(InstructionType::Function, lineNumber), name(name),
-        returnType(returnType), params(std::vector<FunctionExprParameter>()),
-        body(nullptr), firstUses(), firstWrites(), lastUses(), lastWrites(),
-        finishedLinking(false) {}
+        returnType(returnType), generatedLoopBody(generatedLoopBody),
+        params(std::vector<FunctionExprParameter>()), body(nullptr), firstUses(),
+        firstWrites(), lastUses(), lastWrites(), finishedLinking(false) {}
   FunctionExpression(int lineNumber)
       : FunctionExpression("unnamed_func", "void", lineNumber) {}
 
