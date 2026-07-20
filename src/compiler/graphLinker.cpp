@@ -521,6 +521,17 @@ void GraphLinker::processExpression(Expression &expr) {
 
         auto &loopExpr = expressions.find(i)->second.get();
 
+        if (loopExpr.type == InstructionType::Call) {
+          // Resource dependencies entering the generated body call must also
+          // gate condition evaluation. Otherwise a false first condition can
+          // release post-loop dependents before pre-loop writes have completed.
+          for (auto dependency : loopExpr.dependencies) {
+            if (dependency.get().id < returnTo || dependency.get().id > expr.id)
+              addDependency(expressions.find(returnTo)->second,
+                            dependency.get());
+          }
+        }
+
         // Don't a dependency to the block since we'll already have one
         if (i > conditionExpr->id + 1)
           addDependency(expr, loopExpr);

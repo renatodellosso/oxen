@@ -1,8 +1,11 @@
 #include "../../src/compiler/compiler.hpp"
 #include "../../src/instruction.hpp"
+#include "../../src/interpreter/bytecodeParser.hpp"
 #include "../testUtils.hpp"
+#include <algorithm>
 #include <format>
 #include <gtest/gtest.h>
+#include <vector>
 
 const CliArgs args = {};
 
@@ -88,4 +91,35 @@ TEST(compile, compilesElseStatements) {
             std::string::npos);
   EXPECT_NE(out.find("then"), std::string::npos);
   EXPECT_NE(out.find("else"), std::string::npos);
+}
+
+TEST(compile, whileConditionDependsOnPreLoopWritesUsedByItsBody) {
+  auto bytecode = testCompile(
+      "int i = 0; while (false) i = i + 1; print i;");
+  std::istringstream stream(bytecode);
+  std::vector<Instruction> instructions;
+  BytecodeParser parser({}, instructions, stream);
+  parser.buildInstructions();
+
+  auto initialSet = std::ranges::find_if(instructions, [](const auto &instr) {
+    return instr.type == InstructionType::Set;
+  });
+  auto whileInstr =
+      std::ranges::find_if(instructions, [](const auto &instr) {
+        return instr.type == InstructionType::While;
+      });
+
+  ASSERT_NE(initialSet, instructions.end());
+  ASSERT_NE(whileInstr, instructions.end());
+  auto condition = std::ranges::find_if(
+      instructions, [whileInstr](const auto &instr) {
+        return std::ranges::any_of(
+            instr.dependents, [whileInstr](const auto &dep) {
+              return dep.argIndex == 0 && dep.instr == &*whileInstr;
+            });
+      });
+  ASSERT_NE(condition, instructions.end());
+  EXPECT_TRUE(std::ranges::any_of(
+      initialSet->dependents,
+      [condition](const auto &dep) { return dep.instr == &*condition; }));
 }
