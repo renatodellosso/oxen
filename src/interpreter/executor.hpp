@@ -23,14 +23,16 @@ class Executor {
   ExecutionStats *stats;
   ConcurrentQueue<std::reference_wrapper<Instruction>> queue;
   std::vector<std::thread> workers;
-  std::vector<std::atomic_bool> stalls;
+  std::atomic_int pendingTasks;
 
   // We have to put the mutexes in here since we can't move them
   std::vector<std::mutex> depArgsMutexes, depsFulfilledMutexes;
 
   // Loop-back instructions reset dependency state across many instructions.
   // Keep that reset atomic with respect to dependency publication.
-  std::mutex dependencyStateMutex;
+  // Recursive because skipping a block recursively skips its instructions and
+  // may publish dependencies while the outer skip operation is still active.
+  std::recursive_mutex dependencyStateMutex;
   std::mutex coutMutex;
 
   // Set to true to end workers
@@ -40,6 +42,7 @@ class Executor {
 
   // Increment depsFulfilled and, if relevant, sets depArgs[i]
   void updateDependency(InstrDependent dep, std::shared_ptr<Value> result);
+  void enqueueIfReady(Instruction &instr);
   // Use recurse = true at the root level for skipping blocks
   void skipInstruction(Instruction &instr, bool markSkippedAs = true);
   void execSingleInstruction(Instruction &instr);

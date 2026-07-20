@@ -1,6 +1,7 @@
 #include "../../src/cli.hpp"
 #include "../testUtils.hpp"
 #include "tests.hpp"
+#include <gmock/gmock.h>
 #include "gtest/gtest.h"
 #include <filesystem>
 #include <format>
@@ -80,36 +81,28 @@ TEST_P(E2EFixture, E2E) {
   auto test = std::get<E2eTest>(GetParam());
   auto threads = std::get<int>(GetParam());
 
-  for (int repetition = 0; repetition < test.repetitions; repetition++) {
-    SCOPED_TRACE(std::format("repetition {}", repetition));
+  // Ensure folder exists
+  std::filesystem::create_directory(folder);
+  auto fileName = folder + "/" + getTestName(test, threads) + ".p";
 
-    // Ensure folder exists
-    std::filesystem::create_directory(folder);
-    auto fileName = folder + "/" + getTestName(test, threads) + ".p";
+  CliArgs args = {.target = fileName,
+                  .mode = CliMode::CompileAndInterpret,
+                  .threads = threads};
 
-    CliArgs args = {.target = fileName,
-                    .mode = CliMode::CompileAndInterpret,
-                    .threads = threads};
+  // Create temp file with code
+  std::ofstream fileStream(fileName);
+  fileStream << test.code;
+  fileStream.close();
 
-    // Create temp file with code
-    std::ofstream fileStream(fileName);
-    fileStream << test.code;
-    fileStream.close();
+  DISABLE_COUT
+  EXPECT_EQ(executeCommand(args), ExitCode::Ok);
+  auto output = REENABLE_COUT;
 
-    DISABLE_COUT
-    EXPECT_EQ(executeCommand(args), ExitCode::Ok);
-    auto output = REENABLE_COUT;
+  std::filesystem::remove(fileName);
 
-    std::filesystem::remove(fileName);
+  auto splitOut = split(output, '\n');
 
-    auto splitOut = split(output, '\n');
-
-    EXPECT_TRUE(EqualSize(splitOut, test.output));
-
-    for (auto line : test.output) {
-      EXPECT_TRUE(Contains(splitOut, line));
-    }
-  }
+  EXPECT_THAT(splitOut, testing::UnorderedElementsAreArray(test.output));
 }
 
 INSTANTIATE_TEST_SUITE_P(

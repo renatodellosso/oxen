@@ -55,7 +55,7 @@ struct Expression {
   Expression *dependentRedirect;
 
   Expression(InstructionType type, int lineNumber)
-      : type(type), lineNumber(lineNumber), id(-1),
+      : type(type), lineNumber(lineNumber), id(-1), postprocessed(false),
         dependencies(std::vector<std::reference_wrapper<Expression>>()),
         dependents(std::unordered_set<ExprDependent>()),
         dependentRedirect(nullptr) {}

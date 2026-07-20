@@ -124,8 +124,24 @@ invalidArgTypesError(Instruction &instr, ValueType left, ValueType right) {
                   (int)left, (int)right));
 }
 
+void Executor::enqueueIfReady(Instruction &instr) {
+  std::lock_guard<std::recursive_mutex> dependencyStateLock(
+      dependencyStateMutex);
+  std::lock_guard<std::mutex> fulfilledLock(depsFulfilledMutexes[instr.id]);
+
+  if (!instr.queued && !instr.skipped &&
+      instr.depsFulfilled == instr.depCount) {
+    instr.queued = true;
+    pendingTasks.fetch_add(1);
+    queue.push(instr);
+  }
+}
+
 void Executor::updateDependency(InstrDependent dep,
                                 std::shared_ptr<Value> result) {
+  std::lock_guard<std::recursive_mutex> dependencyStateLock(
+      dependencyStateMutex);
+
   if (dep.disabled || dep.instr->skipped)
     return;
 
@@ -156,7 +172,7 @@ void Executor::updateDependency(InstrDependent dep,
   }
 
   // Update fulfilled after setting args so other threads don't trigger
-  int fulfilled;
+  bool ready;
 
   // Smaller scope so the lock guard is cleaned up
   {
@@ -164,22 +180,25 @@ void Executor::updateDependency(InstrDependent dep,
         depsFulfilledMutexes[dep.instr->id]);
 
     dep.instr->depsFulfilled++;
-    fulfilled = dep.instr->depsFulfilled;
+    ready = dep.instr->depsFulfilled == dep.instr->depCount;
   }
 
   if (cliArgs.verbose)
     log(LOCATION, "\tUpdated dependency for {} with result {}",
         dep.instr->toString(), result ? valToStr(*result) : "none");
 
-  if (fulfilled == dep.instr->depCount) {
+  if (ready) {
     if (cliArgs.verbose)
       log(LOCATION, "\tPushing instruction {} onto queue",
           dep.instr->toString());
-    queue.push(*dep.instr);
+    enqueueIfReady(*dep.instr);
   }
 }
 
 void Executor::skipInstruction(Instruction &instr, bool markSkippedAs) {
+  std::lock_guard<std::recursive_mutex> dependencyStateLock(
+      dependencyStateMutex);
+
   if (cliArgs.verbose)
     log(LOCATION, "{} instruction: {}",
         markSkippedAs ? "Skipping" : "Unskipping", instr.toString());
@@ -512,7 +531,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
     break;
   }
   case InstructionType::GoTo: {
-    std::lock_guard<std::mutex> dependencyStateLock(dependencyStateMutex);
+    std::lock_guard<std::recursive_mutex> dependencyStateLock(
+        dependencyStateMutex);
     int dist = std::get<int>(instr.bytecodeArgs[0].val);
 
     if (dist > 0)
@@ -583,14 +603,12 @@ void Executor::execSingleInstruction(Instruction &instr) {
     for (int i = returnTo; i <= instr.id; i++) {
       auto &loopInstr = instr.program->at(i);
 
-      std::lock_guard<std::mutex> fulfilledLock(
-          depsFulfilledMutexes[loopInstr.id]);
       if (loopInstr.depsFulfilled == loopInstr.depCount) {
         if (cliArgs.verbose) {
           log(LOCATION, "\tLooping back to instruction {}",
               loopInstr.toString());
         }
-        queue.push(loopInstr);
+        enqueueIfReady(loopInstr);
       }
     }
 
@@ -618,6 +636,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
     break;
   }
   case InstructionType::Call: {
+    std::lock_guard<std::recursive_mutex> dependencyStateLock(
+        dependencyStateMutex);
     updateDeps = false;
 
     auto func = std::get<std::shared_ptr<Function>>(instr.depArgs[0]->val);
@@ -757,7 +777,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
     }
 
     // Only push once we've relinked everything
-    queue.push(block);
+    enqueueIfReady(block);
 
     break;
   }
@@ -774,7 +794,8 @@ void Executor::execSingleInstruction(Instruction &instr) {
   instr.executed = true;
 
   if (updateDeps) {
-    std::lock_guard<std::mutex> dependencyStateLock(dependencyStateMutex);
+    std::lock_guard<std::recursive_mutex> dependencyStateLock(
+        dependencyStateMutex);
     // GoTo resets the dependency state for an entire loop. If it is queued
     // before this instruction has finished publishing its other dependents, a
     // different worker can start that reset while those updates are still in
@@ -802,17 +823,27 @@ void Executor::execWorker(int id) {
     log(location.c_str(), "Worker {} awake", id);
 
   while (!halt) {
-    stalls[id].store(false);
     auto popped = queue.pop();
 
     // Check popped holds a nullptr_t
     if (std::holds_alternative<nullptr_t>(popped)) {
-      stalls[id].store(true);
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
     }
 
     auto &instr = std::get<std::reference_wrapper<Instruction>>(popped).get();
+
+    {
+      std::lock_guard<std::recursive_mutex> dependencyStateLock(
+          dependencyStateMutex);
+      std::lock_guard<std::mutex> fulfilledLock(
+          depsFulfilledMutexes[instr.id]);
+      instr.queued = false;
+      if (instr.skipped || instr.depsFulfilled != instr.depCount) {
+        pendingTasks.fetch_sub(1);
+        continue;
+      }
+    }
 
     try {
       execSingleInstruction(instr);
@@ -823,6 +854,7 @@ void Executor::execWorker(int id) {
       failed = true;
       halt = true;
     }
+    pendingTasks.fetch_sub(1);
   }
 }
 
@@ -830,27 +862,11 @@ void Executor::supervisor() {
   if (cliArgs.verbose)
     log(LOCATION, "Supervisor awake");
 
-  bool isDone;
-  do {
-    isDone = true;
-
-    for (auto &stall : stalls) {
-      if (!stall.load()) {
-        isDone = false;
-        break;
-      }
-    }
-
-    if (isDone && queue.size() > 0)
-      isDone = false;
-
-    // Removing this breaks tests on Ubuntu. Not sure why, but it reduces the
-    // cycles used by the supervisor
+  while (pendingTasks.load() > 0 && !halt)
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  } while (!isDone && !halt);
 
   if (!halt)
-    haltCause = "All workers stalled";
+    haltCause = "All tasks completed";
   halt = true;
 
   if (cliArgs.verbose)
@@ -867,8 +883,7 @@ void Executor::supervisor() {
 void Executor::initQueue() {
   for (int i = 0; i < program.size(); i++) {
     auto &instr = program[i];
-    if (instr.depsFulfilled == instr.depCount)
-      queue.push(instr);
+    enqueueIfReady(instr);
   }
 
   if (cliArgs.verbose)
@@ -916,10 +931,8 @@ void Executor::startExecution() {
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
                    ExecutionStats *stats)
     : cliArgs(cliArgs), program(program), stats(stats),
-      stalls(std::vector<std::atomic_bool>(cliArgs.threads)),
+      pendingTasks(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
       halt(false), failed(false), haltCause("Unknown") {
-  for (auto &stall : stalls)
-    stall.store(false);
 }

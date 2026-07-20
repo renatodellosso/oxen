@@ -244,21 +244,26 @@ std::vector<E2eTest> tests = {
       "k: 1", "k: 0", "k: 1"}},
     {"LoopBackWaitsForDependencyPublication",
      "int i = 0;\n"
-     "while (i < 3) {\n"
+     "while (i < 10) {\n"
      "int j = 0;\n"
-     "while (j < 2) {\n"
+     "while (j < 5) {\n"
      "int k = 0;\n"
-     "while (k < 2) {\n"
-     "print \"iteration\";\n"
+     "while (k < 3) {\n"
+     "print \"k: \" + k;\n"
      "k = k + 1;\n"
      "}\n"
      "j = j + 1;\n"
      "}\n"
      "i = i + 1;\n"
      "}\n",
-     {"iteration", "iteration", "iteration", "iteration", "iteration", "iteration",
-      "iteration", "iteration", "iteration", "iteration", "iteration", "iteration"},
-     25},
+     [] {
+       std::vector<std::string> output;
+       for (int i = 0; i < 10; i++)
+         for (int j = 0; j < 5; j++)
+           for (int k = 0; k < 3; k++)
+             output.push_back("k: " + std::to_string(k));
+       return output;
+     }()},
     {"WhileLoopsCanBeNestedWhenTheyUseExternalVars",
      "int i = 0;\n"
      "while (i < 3) {\n"

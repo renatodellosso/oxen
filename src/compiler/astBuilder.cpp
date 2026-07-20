@@ -548,6 +548,9 @@ void AstBuilder::postProcess(
         postProcessWhileLoop(expressions, i, expressions->at(i));
 
         i--; // Reprocess the new expression
+        // postProcessWhileLoop replaces and destroys expr, so it must not be
+        // inspected again in this iteration.
+        continue;
       }
     }
 
