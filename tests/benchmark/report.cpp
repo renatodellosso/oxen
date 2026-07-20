@@ -9,18 +9,18 @@ using testing::HasSubstr;
 
 TEST(BenchmarkReport, PrintsStableHeaderAndProgramFields) {
   std::ostringstream output;
-  benchmarking::Options options{.trials = 2, .threads = {4, 1}};
-  benchmarking::Program program{.group = "smoke", .name = "arithmetic"};
-  benchmarking::ProgramSummary summary{.totalCompileTime = 10ns,
-                                       .maxCompileTime = 6ns,
-                                       .totalRunTime = 20ns,
-                                       .maxRunTime = 12ns,
-                                       .totalTime = 30ns,
-                                       .maxTotalTime = 18ns,
-                                       .executedInstructions = 50};
+  Options options{.trials = 2, .threads = {4, 1}};
+  Program program{.group = "smoke", .name = "arithmetic"};
+  ProgramSummary summary{.totalCompileTime = 10ns,
+                         .maxCompileTime = 6ns,
+                         .totalRunTime = 20ns,
+                         .maxRunTime = 12ns,
+                         .totalTime = 30ns,
+                         .maxTotalTime = 18ns,
+                         .executedInstructions = 50};
 
-  benchmarking::printHeader(output, "benchmarks", options);
-  benchmarking::printProgramSummary(output, program, 4, 2, summary);
+  printHeader(output, "benchmarks", options);
+  printProgramSummary(output, program, 4, 2, summary);
 
   EXPECT_THAT(output.str(), HasSubstr("Benchmark root: benchmarks\n"));
   EXPECT_THAT(output.str(), HasSubstr("Trials: 2\nThreads: 4 1\n"));
@@ -31,11 +31,10 @@ TEST(BenchmarkReport, PrintsStableHeaderAndProgramFields) {
 
 TEST(BenchmarkReport, PrintsAggregateAndRejectsZeroInstructions) {
   std::ostringstream output;
-  benchmarking::printAggregateSummary(
+  printAggregateSummary(
       output, {.totalRunTime = 20ns, .executedInstructions = 4});
   EXPECT_THAT(output.str(), HasSubstr("time_per_bytecode_instruction=5.000ns"));
   EXPECT_THAT(output.str(), HasSubstr("total_executed_instructions=4"));
 
-  EXPECT_THROW(benchmarking::printAggregateSummary(output, {}),
-               std::runtime_error);
+  EXPECT_THROW(printAggregateSummary(output, {}), std::runtime_error);
 }

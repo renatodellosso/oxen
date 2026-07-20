@@ -1,8 +1,6 @@
 #include "results.hpp"
 #include <algorithm>
 
-namespace benchmarking {
-
 ProgramSummary summarize(const std::vector<TrialResult> &trials) {
   ProgramSummary summary;
   for (const TrialResult &trial : trials) {
@@ -19,5 +17,3 @@ ProgramSummary summarize(const std::vector<TrialResult> &trials) {
   }
   return summary;
 }
-
-} // namespace benchmarking

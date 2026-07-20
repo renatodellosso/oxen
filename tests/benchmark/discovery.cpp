@@ -39,7 +39,7 @@ TEST(BenchmarkDiscovery, FindsProgramsInDeterministicOrder) {
   touch(temporary.path / "alpha" / "ignored.txt");
   touch(temporary.path / "top-level.p");
 
-  auto programs = benchmarking::discoverPrograms(temporary.path);
+  auto programs = discoverPrograms(temporary.path);
 
   ASSERT_EQ(programs.size(), 3);
   EXPECT_EQ(programs[0].group, "alpha");
@@ -52,8 +52,7 @@ TEST(BenchmarkDiscovery, FindsProgramsInDeterministicOrder) {
 
 TEST(BenchmarkDiscovery, RejectsMissingAndEmptyRoots) {
   TemporaryDirectory temporary;
-  EXPECT_THROW(benchmarking::discoverPrograms(temporary.path / "missing"),
+  EXPECT_THROW(discoverPrograms(temporary.path / "missing"),
                std::runtime_error);
-  EXPECT_THROW(benchmarking::discoverPrograms(temporary.path),
-               std::runtime_error);
+  EXPECT_THROW(discoverPrograms(temporary.path), std::runtime_error);
 }

@@ -3,8 +3,6 @@
 #include <format>
 #include <stdexcept>
 
-namespace benchmarking {
-
 std::vector<Program> discoverPrograms(const std::filesystem::path &root) {
   if (!std::filesystem::exists(root))
     throw std::runtime_error(
@@ -43,5 +41,3 @@ std::vector<Program> discoverPrograms(const std::filesystem::path &root) {
 
   return programs;
 }
-
-} // namespace benchmarking

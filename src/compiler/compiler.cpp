@@ -6,8 +6,17 @@
 #include "tokenizer.hpp"
 #include <cmath>
 #include <format>
+#include <utility>
 
 #define LOCATION "compiler"
+
+ExitCode compileToBytecode(const CliArgs &args, std::istream &source,
+                           std::string &bytecode) {
+  return compile(args, source, [&bytecode](std::string text) {
+    bytecode = std::move(text);
+    return std::nullopt;
+  });
+}
 
 ExitCode
 compile(const CliArgs &args, std::istream &inputStream,

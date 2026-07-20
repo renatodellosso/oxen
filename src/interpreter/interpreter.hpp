@@ -6,6 +6,9 @@
 
 struct ExecutionStats;
 
+ExitCode executeBytecode(const CliArgs &args, std::istream &bytecode,
+                         ExecutionStats *stats = nullptr);
+
 class Interpreter {
   const CliArgs &args;
 

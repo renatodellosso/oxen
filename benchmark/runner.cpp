@@ -1,7 +1,8 @@
 #include "runner.hpp"
 #include "../src/cliUtils.hpp"
+#include "../src/compiler/compiler.hpp"
 #include "../src/interpreter/executor.hpp"
-#include "../src/programExecution.hpp"
+#include "../src/interpreter/interpreter.hpp"
 #include "../src/streamRedirect.hpp"
 #include <chrono>
 #include <format>
@@ -10,21 +11,9 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace benchmarking {
 namespace {
 
 using Clock = std::chrono::steady_clock;
-
-class CoutSilencer {
-  std::ostringstream sink;
-  ScopedStreamRedirect redirect;
-
-public:
-  CoutSilencer() : redirect(std::cout, sink.rdbuf()) {}
-
-  CoutSilencer(const CoutSilencer &) = delete;
-  CoutSilencer &operator=(const CoutSilencer &) = delete;
-};
 
 } // namespace
 
@@ -55,7 +44,8 @@ TrialResult runTrial(const Program &program, int threads) {
   auto runStart = Clock::now();
   ExitCode executionExit;
   {
-    CoutSilencer silencer;
+    std::ostringstream ignoredOutput;
+    ScopedStreamRedirect redirect(std::cout, ignoredOutput.rdbuf());
     executionExit = executeBytecode(args, bytecodeStream, &stats);
   }
   auto runEnd = Clock::now();
@@ -71,5 +61,3 @@ TrialResult runTrial(const Program &program, int threads) {
           .executedInstructions =
               stats.executedInstructions.load(std::memory_order_relaxed)};
 }
-
-} // namespace benchmarking

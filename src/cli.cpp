@@ -4,7 +4,6 @@
 #include "exitCode.hpp"
 #include "interpreter/interpreter.hpp"
 #include "logging.hpp"
-#include "programExecution.hpp"
 #include <filesystem>
 #include <format>
 #include <fstream>

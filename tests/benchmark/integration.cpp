@@ -1,8 +1,9 @@
 #include "../../benchmark/application.hpp"
 #include "../../benchmark/runner.hpp"
 #include "../../src/cliUtils.hpp"
+#include "../../src/compiler/compiler.hpp"
 #include "../../src/interpreter/executor.hpp"
-#include "../../src/programExecution.hpp"
+#include "../../src/interpreter/interpreter.hpp"
 #include "../../src/streamRedirect.hpp"
 #include <chrono>
 #include <filesystem>
@@ -62,8 +63,7 @@ TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
   writeProgram("simple.p", "int value = 1; value = value + 2;");
   std::ostringstream output;
 
-  auto aggregate = benchmarking::run(
-      {.trials = 1, .threads = {1}}, root, output);
+  auto aggregate = run({.trials = 1, .threads = {1}}, root, output);
 
   EXPECT_GT(aggregate.executedInstructions, 0);
   EXPECT_GE(aggregate.totalRunTime.count(), 0);
@@ -75,14 +75,12 @@ TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
 
 TEST_F(BenchmarkFixture, ReportsInvalidSourceWithProgramPath) {
   auto path = writeProgram("invalid.p", "this is not valid;");
-  benchmarking::Program program{.group = "smoke",
-                                .name = "invalid",
-                                .path = path};
+  Program program{.group = "smoke", .name = "invalid", .path = path};
   std::ostringstream ignored;
   ScopedStreamRedirect redirect(std::cout, ignored.rdbuf());
 
   try {
-    benchmarking::runTrial(program, 1);
+    runTrial(program, 1);
     FAIL() << "Expected compilation to fail";
   } catch (const std::runtime_error &error) {
     EXPECT_THAT(error.what(), HasSubstr(path.string()));
@@ -92,13 +90,11 @@ TEST_F(BenchmarkFixture, ReportsInvalidSourceWithProgramPath) {
 
 TEST_F(BenchmarkFixture, ReportsUnreadableSourceWithProgramPath) {
   auto path = root / "smoke" / "missing.p";
-  benchmarking::Program program{.group = "smoke",
-                                .name = "missing",
-                                .path = path};
+  Program program{.group = "smoke", .name = "missing", .path = path};
   EXPECT_THROW(
       {
         try {
-          benchmarking::runTrial(program, 1);
+          runTrial(program, 1);
         } catch (const std::runtime_error &error) {
           EXPECT_THAT(error.what(), HasSubstr(path.string()));
           throw;

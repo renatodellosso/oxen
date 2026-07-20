@@ -9,8 +9,6 @@
 #include <string_view>
 #include <vector>
 
-namespace benchmarking {
-
 AggregateSummary run(const Options &options,
                      const std::filesystem::path &benchmarkRoot,
                      std::ostream &output) {
@@ -57,5 +55,3 @@ int runApplication(int argc, char *argv[], std::ostream &output,
     return 1;
   }
 }
-
-} // namespace benchmarking

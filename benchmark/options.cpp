@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <string>
 
-namespace benchmarking {
 namespace {
 
 [[noreturn]] void usageError(const std::string &message) {
@@ -72,5 +71,3 @@ Options parseOptions(const std::vector<std::string_view> &arguments) {
 
   return options;
 }
-
-} // namespace benchmarking

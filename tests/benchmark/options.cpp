@@ -4,8 +4,6 @@
 #include <string_view>
 #include <vector>
 
-using benchmarking::parseOptions;
-
 TEST(BenchmarkOptions, UsesDefaults) {
   auto options = parseOptions({});
   EXPECT_EQ(options.trials, 10);

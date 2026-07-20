@@ -3,7 +3,6 @@
 #include <format>
 #include <stdexcept>
 
-namespace benchmarking {
 namespace {
 
 std::string formatAverage(Nanoseconds total, int count) {
@@ -53,5 +52,3 @@ void printAggregateSummary(std::ostream &output,
       nsPerInstruction, formatNs(summary.totalRunTime),
       summary.executedInstructions);
 }
-
-} // namespace benchmarking

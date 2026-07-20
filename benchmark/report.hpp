@@ -4,8 +4,6 @@
 #include <filesystem>
 #include <ostream>
 
-namespace benchmarking {
-
 void printHeader(std::ostream &output, const std::filesystem::path &root,
                  const Options &options);
 void printProgramSummary(std::ostream &output, const Program &program,
@@ -13,5 +11,3 @@ void printProgramSummary(std::ostream &output, const Program &program,
                          const ProgramSummary &summary);
 void printAggregateSummary(std::ostream &output,
                            const AggregateSummary &summary);
-
-} // namespace benchmarking

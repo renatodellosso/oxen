@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-namespace benchmarking {
-
 using Nanoseconds = std::chrono::nanoseconds;
 
 struct Program {
@@ -41,5 +39,3 @@ struct AggregateSummary {
   Nanoseconds totalRunTime = Nanoseconds::zero();
   std::uint64_t executedInstructions = 0;
 };
-
-} // namespace benchmarking
