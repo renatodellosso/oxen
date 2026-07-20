@@ -593,6 +593,48 @@ std::vector<E2eTest> tests = {
      "while (i < 3) { printArg(i); i = i + 1; }",
      ExpectOrdered({"0", "1", "2"})},
 
+    // Feature combinations
+    {"WhileConditionsCanCallFunctions",
+     "bool keepGoing(int value) { return value < 3; }\n"
+     "int i = 0;\n"
+     "while (keepGoing(i)) {\n"
+     "print i;\n"
+     "i = i + 1;\n"
+     "}",
+     ExpectOrdered({"0", "1", "2"})},
+    {"RecursiveCallsCanCombineConditionalsAndArithmetic",
+     "int remaining = 3;\n"
+     "void countDown() {\n"
+     "print remaining;\n"
+     "if (remaining) {\n"
+     "remaining = remaining - 1;\n"
+     "countDown();\n"
+     "}\n"
+     "}\n"
+     "countDown();",
+     ExpectOrdered({"3", "2", "1", "0"})},
+    {"IfStatementsCanRunInsideElseBlocks",
+     "string choose(bool outer, bool inner) {\n"
+     "if (outer) return \"outer\";\n"
+     "else {\n"
+     "if (inner) return \"inner\";\n"
+     "else return \"fallback\";\n"
+     "}\n"
+     "}\n"
+     "print choose(true, false);\n"
+     "print choose(false, true);\n"
+     "print choose(false, false);",
+     ExpectUnordered({"outer", "inner", "fallback"})},
+    {"LoopBranchesCanCallFunctions",
+     "bool isTarget(int value) { return value == 2; }\n"
+     "int i = 0;\n"
+     "while (i < 4) {\n"
+     "if (isTarget(i)) print \"found \" + i;\n"
+     "else print \"skip \" + i;\n"
+     "i = i + 1;\n"
+     "}",
+     ExpectOrdered({"skip 0", "skip 1", "found 2", "skip 3"})},
+
     {"ReturnsWork", "int main() { return 1; }\nprint main();",
      ExpectUnordered({"1"})},
     {"ReturnsWorkWithMultipleCalls",

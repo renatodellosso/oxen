@@ -727,11 +727,14 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
     auto returnLatch = std::make_shared<std::atomic_bool>(false);
     for (auto &dep : instr.dependents) {
-      if (dep.disabled || !dep.argIndex)
+      if (!dep.argIndex)
         continue;
 
       for (auto returnId : returnIds) {
+        // The direct edge stays disabled after the first invocation, but each
+        // invocation still needs an enabled edge from its cloned return.
         auto returnDep = dep;
+        returnDep.disabled = false;
         returnDep.returnLatch = returnLatch;
         body->at(returnId).dependents.push_back(returnDep);
       }

@@ -370,3 +370,65 @@ TEST(startExecution, initsFunctions) {
 
   REENABLE_COUT
 }
+
+TEST(startExecution, remapsReturnsAfterCallDirectDependencyIsDisabled) {
+  auto instrs = std::make_shared<std::vector<Instruction>>();
+  for (int i = 0; i < 7; i++)
+    instrs->emplace_back(i);
+
+  auto &function = instrs->at(0);
+  function.type = InstructionType::Function;
+  function.bytecodeArgs = {{ValueType::Identifier, "bool"},
+                           {ValueType::Identifier, "predicate"}};
+  function.dependents = {InstrDependent(&instrs->at(1)),
+                         InstrDependent(&instrs->at(4))};
+
+  auto &body = instrs->at(1);
+  body.type = InstructionType::Block;
+  body.depCount = 1;
+  body.bytecodeArgs = {{ValueType::Integer, 2}, {ValueType::Integer, 0}};
+  body.dependents = {InstrDependent(&instrs->at(2))};
+
+  auto &literal = instrs->at(2);
+  literal.type = InstructionType::GetLiteral;
+  literal.depCount = 1;
+  literal.bytecodeArgs = {{ValueType::Bool, true}};
+  literal.dependents = {InstrDependent(&instrs->at(3), 0)};
+
+  auto &returnInstruction = instrs->at(3);
+  returnInstruction.type = InstructionType::Return;
+  returnInstruction.depCount = 1;
+
+  auto &getFunction = instrs->at(4);
+  getFunction.type = InstructionType::GetIdentifier;
+  getFunction.depCount = 1;
+  getFunction.bytecodeArgs = {{ValueType::Identifier, "predicate"}};
+  getFunction.dependents = {InstrDependent(&instrs->at(5), 0)};
+
+  auto &call = instrs->at(5);
+  call.type = InstructionType::Call;
+  call.depCount = 1;
+  call.bytecodeArgs = {
+      {ValueType::Integer, 0}, // Dependency remappings
+      {ValueType::Integer, 0}, // Argument remappings
+      {ValueType::Integer, 0}, // Argument declarations
+      {ValueType::Integer, 1}, // Return instructions
+      {ValueType::Integer, 2}, // Return instruction ID in the function body
+  };
+  call.dependents = {InstrDependent(&instrs->at(6), 0)};
+  call.dependents[0].disabled = true;
+
+  auto &print = instrs->at(6);
+  print.type = InstructionType::Print;
+  print.depCount = 1;
+
+  auto program = std::make_shared<Subprogram>(instrs);
+  program->setSubprogramPointers(program);
+  Executor executor({.threads = 1}, *program);
+
+  DISABLE_COUT
+  executor.startExecution();
+  auto output = REENABLE_COUT
+
+  EXPECT_EQ(output, "true\n");
+}
