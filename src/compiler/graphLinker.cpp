@@ -62,6 +62,13 @@ addDependency(Expression &expr, Expression &dependsOn,
       // The resource was consumed by a call argument. Its next user must wait
       // for the whole invocation, not for a matching global resource access in
       // the callee. The executor adds the invocation's terminal signals.
+      // The synthetic Set for this call's own argument is not a later user: it
+      // initializes the invocation and already depends directly on the Call.
+      for (int i = 1; i < call.block.expressions.size(); i++) {
+        if (call.block.expressions[i].get() == &expr)
+          return;
+      }
+
       call.depRemaps[&expr] = {};
       return;
     }
@@ -116,7 +123,7 @@ GraphLinker::GraphLinker(
     : cliArgs(cliArgs), errors(std::make_shared<std::vector<SyntaxError>>(
                             std::vector<SyntaxError>())),
       scope(std::make_shared<Scope<Resource>>()), scopeLifetimes(),
-      function(std::nullopt), funcExprsRemaining() {
+      function(std::nullopt), funcExprsRemaining(), processingDeferred(false) {
   expressions = std::map<int, std::reference_wrapper<Expression>>();
   for (auto expr : *exprVector.get()) {
     auto vec = expr->getWithSubExpressions();
@@ -475,17 +482,27 @@ void GraphLinker::processExpression(Expression &expr) {
           function->get().deferred = true;
           deferredFunctionLinkings.insert(function.value().get());
         } else {
+          auto &callee = resource->function.value().get();
+          const auto *lastUses = &callee.lastUses;
+          const auto *lastWrites = &callee.lastWrites;
+          auto deferredUsage = deferredFunctionUsage.find(&callee);
+          if (processingDeferred &&
+              deferredUsage != deferredFunctionUsage.end()) {
+            lastUses = &deferredUsage->second.lastUses;
+            lastWrites = &deferredUsage->second.lastWrites;
+          }
+
           // Maps resource names to write (true/false)
           auto uses = std::unordered_map<std::string, bool>();
 
           // Set all reads first
           // Use last instead of first since params are only present in last
-          for (auto use : resource->function.value().get().lastUses) {
+          for (auto use : *lastUses) {
             uses[use.first] = false;
           }
 
           // Then all writes
-          for (auto use : resource->function.value().get().lastWrites) {
+          for (auto use : *lastWrites) {
             uses[use.first] = true;
           }
 
@@ -573,12 +590,14 @@ void GraphLinker::enterFunction(std::reference_wrapper<Expression> expr) {
 
   tempFunc->get().deferred = false;
 
-  // Create function resource in outer scope (use auto & instead of just auto so
-  // as not to make a copy!)
-  auto name = tempFunc->get().name;
-  auto &resource = createResource(name);
-  useResource(tempFunc->get(), name, true);
-  resource.function = tempFunc;
+  if (!processingDeferred) {
+    // Create function resource in outer scope (use auto & instead of just auto
+    // so as not to make a copy!)
+    auto name = tempFunc->get().name;
+    auto &resource = createResource(name);
+    useResource(tempFunc->get(), name, true);
+    resource.function = tempFunc;
+  }
 
   if (function)
     funcStack.push(function.value());
@@ -596,15 +615,32 @@ void GraphLinker::enterFunction(std::reference_wrapper<Expression> expr) {
   funcExprsRemaining.push(std::move(std::make_unique<int>(exprCount)));
 
   savedScopes.push(scope);
-  scope = std::make_shared<Scope<Resource>>(cloneResourceScope(scope));
+  if (processingDeferred) {
+    if (!function->get().scope)
+      throw std::runtime_error(std::format(
+          "Tried to relink function '{}', but it had no saved scope!",
+          function->get().name));
+
+    // Rebuild the function's original lexical environment without retaining
+    // resource access state from the incomplete first pass.
+    scope = cloneResourceScope(function->get().scope);
+    function->get().firstUses.clear();
+    function->get().firstWrites.clear();
+    function->get().lastUses.clear();
+    function->get().lastWrites.clear();
+  } else {
+    scope = std::make_shared<Scope<Resource>>(cloneResourceScope(scope));
+  }
   scopeLifetimes.push(
       expressions.find(expr.get().id + 1)->second.get().countInstructions() +
       1);
 
   function->get().scope = scope;
 
-  for (auto param : function->get().params)
-    createResource(param.name);
+  if (!processingDeferred) {
+    for (auto param : function->get().params)
+      createResource(param.name);
+  }
 }
 
 void GraphLinker::exitFunction() {
@@ -714,7 +750,23 @@ void GraphLinker::linkDeferred() {
     log(LOCATION, "Linking {} deferred functions",
         deferredFunctionLinkings.size());
 
+  if (deferredFunctionLinkings.empty())
+    return;
+
   processingDeferred = true;
+
+  deferredFunctionUsage.clear();
+  for (auto &func : deferredFunctionLinkings) {
+    deferredFunctionUsage.emplace(
+        &func.get(), FunctionUsageSummary{func.get().lastUses,
+                                          func.get().lastWrites});
+  }
+
+  // Branch snapshots reference resources from the first-pass working scopes.
+  // Recreate them against the clean scopes used for deferred linking.
+  branchContexts.clear();
+  branchByElseInstructionId.clear();
+  branchByMergeId.clear();
 
   expressions = std::map<int, std::reference_wrapper<Expression>>();
   for (auto &func : deferredFunctionLinkings) {
@@ -729,6 +781,9 @@ void GraphLinker::linkDeferred() {
 
   while (function.has_value())
     exitFunction();
+
+  processingDeferred = false;
+  deferredFunctionUsage.clear();
 }
 
 void GraphLinker::linkGraph() {

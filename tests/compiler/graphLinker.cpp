@@ -955,6 +955,89 @@ TEST(linkGraph, setsFunctionFinishedLinking) {
   delete linker;
 }
 
+TEST(linkGraph, linksRecursiveFunctionsWithoutRedeclaringTheirResource) {
+  auto getFunction = std::make_shared<RootExpression>(
+      InstructionType::GetIdentifier, 2,
+      Token{TokenType::Identifier, TokenSubtype::None, "recursive", 2});
+  auto recursiveCall = std::make_shared<CallExpression>(getFunction, 2);
+  auto body = std::make_shared<BlockExpression>(
+      BlockExpression({recursiveCall}, 1));
+
+  auto function = std::make_shared<FunctionExpression>(
+      FunctionExpression("recursive", "void", 1));
+  function->body = body;
+
+  auto expressions =
+      std::make_shared<std::vector<std::shared_ptr<Expression>>>();
+  expressions->push_back(function);
+  numberExpressions(expressions);
+
+  GraphLinker linker(expressions);
+
+  // A recursive call requires a deferred second linking pass. That pass should
+  // reuse the function resource created by the first pass.
+  EXPECT_NO_THROW(linker.linkGraph());
+
+  ASSERT_TRUE(recursiveCall->function.has_value());
+  EXPECT_EQ(&recursiveCall->function->get(), function.get());
+  ASSERT_TRUE(recursiveCall->getActualCall().function.has_value());
+  EXPECT_EQ(&recursiveCall->getActualCall().function->get(), function.get());
+
+  auto &resources = linker.getResources();
+  EXPECT_EQ(resources.size(), 4);
+  ASSERT_TRUE(resources.contains("recursive"));
+  ASSERT_TRUE(resources.at("recursive")->function.has_value());
+  EXPECT_EQ(&resources.at("recursive")->function->get(), function.get());
+}
+
+TEST(linkGraph, recursiveCallsRetainCapturedResourceDependencies) {
+  auto type = std::make_shared<RootExpression>(
+      InstructionType::GetIdentifier, 1,
+      Token{TokenType::Identifier, TokenSubtype::None, "int", 1});
+  auto name = std::make_shared<RootExpression>(
+      InstructionType::GetLiteral, 1,
+      Token{TokenType::Identifier, TokenSubtype::None, "remaining", 1});
+  auto declaration = std::make_shared<BinaryExpression>(
+      InstructionType::Declare, 1, type, name);
+
+  auto reference = std::make_shared<RootExpression>(
+      InstructionType::ReferenceIdentifier, 3,
+      Token{TokenType::Identifier, TokenSubtype::None, "remaining", 3});
+  auto value = std::make_shared<RootExpression>(
+      InstructionType::GetLiteral, 3,
+      Token{TokenType::Literal, TokenSubtype::Integer, "1", 3});
+  auto write = std::make_shared<BinaryExpression>(
+      InstructionType::Set, 3, reference, value);
+
+  auto getFunction = std::make_shared<RootExpression>(
+      InstructionType::GetIdentifier, 4,
+      Token{TokenType::Identifier, TokenSubtype::None, "recursive", 4});
+  auto recursiveCall = std::make_shared<CallExpression>(getFunction, 4);
+  auto body = std::make_shared<BlockExpression>(
+      BlockExpression({write, recursiveCall}, 2));
+
+  auto function = std::make_shared<FunctionExpression>(
+      FunctionExpression("recursive", "void", 2));
+  function->body = body;
+
+  auto expressions =
+      std::make_shared<std::vector<std::shared_ptr<Expression>>>();
+  expressions->push_back(declaration);
+  expressions->push_back(function);
+  numberExpressions(expressions);
+
+  GraphLinker linker(expressions);
+  ASSERT_NO_THROW(linker.linkGraph());
+  ASSERT_TRUE(recursiveCall->getActualCall().function.has_value());
+
+  bool callDependsOnWrite = false;
+  for (auto dependency : recursiveCall->getActualCall().dependencies) {
+    if (&dependency.get() == write.get())
+      callDependsOnWrite = true;
+  }
+  EXPECT_TRUE(callDependsOnWrite);
+}
+
 TEST(linkGraph, createsFunctionResource) {
   auto type = std::make_shared<RootExpression>(
       RootExpression(InstructionType::GetIdentifier, 0,

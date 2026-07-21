@@ -34,6 +34,19 @@ class GraphLinker {
       deferredFunctionLinkings;
   bool processingDeferred;
 
+  struct FunctionUsageSummary {
+    std::unordered_map<
+        std::string, std::vector<std::reference_wrapper<Expression>>>
+        lastUses;
+    std::unordered_map<std::string, std::reference_wrapper<Expression>>
+        lastWrites;
+  };
+
+  // Recursive calls encountered while rebuilding a deferred function need
+  // the completed first-pass summary until the replacement is ready.
+  std::unordered_map<FunctionExpression *, FunctionUsageSummary>
+      deferredFunctionUsage;
+
   struct ResourceState {
     std::shared_ptr<Resource> resource;
     Expression *lastWrittenBy;

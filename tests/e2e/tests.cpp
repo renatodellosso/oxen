@@ -603,7 +603,7 @@ std::vector<E2eTest> tests = {
      "}",
      ExpectOrdered({"0", "1", "2"})},
     {"RecursiveCallsCanCombineConditionalsAndArithmetic",
-     "int remaining = 3;\n"
+     "int remaining = 12;\n"
      "void countDown() {\n"
      "print remaining;\n"
      "if (remaining) {\n"
@@ -612,7 +612,26 @@ std::vector<E2eTest> tests = {
      "}\n"
      "}\n"
      "countDown();",
-     ExpectOrdered({"3", "2", "1", "0"})},
+     ExpectOrdered({"12", "11", "10", "9", "8", "7", "6", "5", "4",
+                    "3", "2", "1", "0"})},
+    {"RecursiveFibonacciCallsCanBeLinked",
+     "int fibonacci(int n) {\n"
+     "if (n == 1) return 1;\n"
+     "else if (n == 2) return 1;\n"
+     "else return fibonacci(n - 1) + fibonacci(n - 2);\n"
+     "}\n"
+     "print fibonacci(3);",
+     ExpectUnordered({"2"})},
+    {"NestedRecursiveFunctionsRetainTheirLexicalScope",
+     "int outer(int captured) {\n"
+     "int inner(int n) {\n"
+     "if (n == 1) return captured;\n"
+     "else return inner(n - 1);\n"
+     "}\n"
+     "return inner(3);\n"
+     "}\n"
+     "print outer(7);",
+     ExpectUnordered({"7"})},
     {"IfStatementsCanRunInsideElseBlocks",
      "string choose(bool outer, bool inner) {\n"
      "if (outer) return \"outer\";\n"
