@@ -82,6 +82,11 @@ The regression suite requires at least two programs in this group and at least
 worker. The instruction threshold keeps this contract deterministic across
 machines; elapsed time remains a measured result rather than a test assertion.
 
+Programs in `benchmarks/parallel` focus on workloads that expose useful DAG
+width: independent control-flow lanes perform the substantial work and join
+only when their results are reduced. The group covers flat arithmetic and
+branch-heavy fan-out, heterogeneous lanes, and a wide fork/join reduction.
+
 ## Errors and tests
 
 Internal benchmark failures use exceptions with relevant paths or exit codes.

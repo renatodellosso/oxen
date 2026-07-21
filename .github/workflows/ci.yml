@@ -113,8 +113,8 @@ jobs:
           call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64
           cmake --build build
       - name: Run Benchmarks
-        run: build/Benchmark --trials 50
+        run: build/Benchmark
         if: ${{ matrix.os != 'windows-latest' }}
       - name: Run Benchmarks (Windows)
-        run: ./build/Benchmark.exe --trials 50
+        run: ./build/Benchmark.exe
         if: ${{ matrix.os == 'windows-latest' }}
