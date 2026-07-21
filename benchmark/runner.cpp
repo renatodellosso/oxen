@@ -11,25 +11,20 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 
 namespace {
 
 using Clock = std::chrono::steady_clock;
 
-} // namespace
-
-TrialResult runTrial(const Program &program, int threads) {
-  CliArgs args = {.target = program.path.string(),
+TrialResult runSource(std::istream &source, std::string_view sourceName,
+                      int threads) {
+  CliArgs args = {.target = std::string(sourceName),
                   .outputFile = std::nullopt,
                   .mode = CliMode::CompileAndInterpret,
                   .verbose = false,
                   .threads = threads,
                   .debugBytecode = false};
-
-  std::ifstream source(program.path);
-  if (!source.is_open())
-    throw std::runtime_error(std::format("Could not open benchmark source '{}'",
-                                         program.path.string()));
 
   auto compileStart = Clock::now();
   std::string bytecode;
@@ -38,7 +33,7 @@ TrialResult runTrial(const Program &program, int threads) {
   if (compileExit != ExitCode::Ok)
     throw std::runtime_error(
         std::format("Compilation failed for '{}' with exit code {}",
-                    program.path.string(), static_cast<int>(compileExit)));
+                    sourceName, static_cast<int>(compileExit)));
 
   std::istringstream bytecodeStream(bytecode);
   ExecutionStats stats;
@@ -52,7 +47,7 @@ TrialResult runTrial(const Program &program, int threads) {
     } catch (const Error &error) {
       throw Error(error.getCode(),
                   std::format("Execution failed for '{}': {}",
-                              program.path.string(), error.what()));
+                              sourceName, error.what()));
     }
   }
   auto runEnd = Clock::now();
@@ -61,4 +56,20 @@ TrialResult runTrial(const Program &program, int threads) {
                                                                  compileStart),
           .runTime = std::chrono::duration_cast<Nanoseconds>(runEnd - runStart),
           .executedInstructions = stats.executedInstructions};
+}
+
+} // namespace
+
+TrialResult runTrial(const Program &program, int threads) {
+  std::ifstream source(program.path);
+  if (!source.is_open())
+    throw std::runtime_error(std::format("Could not open benchmark source '{}'",
+                                         program.path.string()));
+
+  return runSource(source, program.path.string(), threads);
+}
+
+TrialResult runEmptyTrial(int threads) {
+  std::istringstream source;
+  return runSource(source, "<empty benchmark>", threads);
 }

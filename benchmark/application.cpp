@@ -15,8 +15,15 @@ AggregateSummary run(const Options &options,
   const std::vector<Program> programs = discoverPrograms(benchmarkRoot);
   AggregateSummary aggregate;
   aggregate.byThread.reserve(options.threads.size());
-  for (int threads : options.threads)
-    aggregate.byThread.push_back({.threads = threads});
+  for (int threads : options.threads) {
+    Nanoseconds totalStartupTime = Nanoseconds::zero();
+    for (int trial = 0; trial < options.trials; ++trial)
+      totalStartupTime += runEmptyTrial(threads).runTime;
+
+    aggregate.byThread.push_back(
+        {.threads = threads,
+         .estimatedStartupTime = totalStartupTime / options.trials});
+  }
   std::string currentGroup;
 
   printHeader(output, benchmarkRoot, options);
@@ -40,6 +47,7 @@ AggregateSummary run(const Options &options,
       aggregate.byThread[threadIndex].executedInstructions +=
           summary.executedInstructions;
       aggregate.byThread[threadIndex].totalRunTime += summary.totalRunTime;
+      aggregate.byThread[threadIndex].trialCount += options.trials;
       printProgramSummary(output, program, threads, options.trials, summary);
     }
   }

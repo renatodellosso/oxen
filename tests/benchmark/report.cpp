@@ -36,18 +36,43 @@ TEST(BenchmarkReport, PrintsAggregateAndRejectsZeroInstructions) {
                          .executedInstructions = 4,
                          .byThread = {{.threads = 1,
                                        .totalRunTime = 6ns,
+                                       .estimatedStartupTime = 1ns,
+                                       .trialCount = 2,
                                        .executedInstructions = 3},
                                       {.threads = 4,
                                        .totalRunTime = 14ns,
+                                       .estimatedStartupTime = 3ns,
+                                       .trialCount = 2,
                                        .executedInstructions = 1}}});
   EXPECT_THAT(output.str(),
-              HasSubstr("threads=1 time_per_bytecode_instruction=2.000ns"));
+              HasSubstr("threads=1 time_per_bytecode_instruction=1.333ns"));
   EXPECT_THAT(output.str(),
-              HasSubstr("threads=4 time_per_bytecode_instruction=14.000ns"));
+              HasSubstr("threads=4 time_per_bytecode_instruction=8.000ns"));
   EXPECT_THAT(
       output.str(),
-      HasSubstr("overall time_per_bytecode_instruction=5.000ns"));
+      HasSubstr("overall time_per_bytecode_instruction=3.000ns"));
+  EXPECT_THAT(output.str(), HasSubstr("estimated_startup_time=1ns"));
+  EXPECT_THAT(output.str(), HasSubstr("adjusted_run_time=4ns"));
   EXPECT_THAT(output.str(), HasSubstr("total_executed_instructions=4"));
 
   EXPECT_THROW(printAggregateSummary(output, {}), std::runtime_error);
+}
+
+TEST(BenchmarkReport, ClampsRuntimeAfterStartupAdjustmentToZero) {
+  std::ostringstream output;
+  printAggregateSummary(output,
+                        {.totalRunTime = 2ns,
+                         .executedInstructions = 1,
+                         .byThread = {{.threads = 4,
+                                       .totalRunTime = 2ns,
+                                       .estimatedStartupTime = 3ns,
+                                       .trialCount = 1,
+                                       .executedInstructions = 1}}});
+
+  EXPECT_THAT(output.str(),
+              HasSubstr("threads=4 time_per_bytecode_instruction=0.000ns"));
+  EXPECT_THAT(output.str(), HasSubstr("adjusted_run_time=0ns"));
+  EXPECT_THAT(
+      output.str(),
+      HasSubstr("overall time_per_bytecode_instruction=0.000ns"));
 }

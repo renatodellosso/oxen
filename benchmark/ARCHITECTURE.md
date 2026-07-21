@@ -13,6 +13,7 @@ main
        -> parseOptions(arguments)
        -> run(options, benchmark root, output)
             -> discoverPrograms(root)
+            -> estimate executor startup with an empty program per thread count
             -> for each program and thread count
                  -> runTrial(program, threads) once per trial
                       -> compileToBytecode(source)
@@ -70,10 +71,14 @@ the entire run, plus the corresponding totals for each requested thread count.
 
 Compilation timing covers source compilation into bytecode. Execution timing
 covers bytecode parsing, program construction, executor startup, and execution;
-it does not include compilation or report formatting. Each time-per-instruction
-value is aggregate run time divided by aggregate executed instructions for
-either one requested thread count or the entire run. A run that executes no
-instructions is treated as an error.
+it does not include compilation or report formatting. Before running the
+programs, the benchmark executes an empty program for every requested thread
+count and averages the configured number of trials to estimate per-trial
+startup. Each time-per-instruction value subtracts that thread count's estimated
+startup for every measured trial from aggregate run time, clamps the adjusted
+time to zero, and divides by aggregate executed instructions. The overall value
+sums the adjusted per-thread runtimes. A run that executes no instructions is
+treated as an error.
 
 Programs in `benchmarks/longRunning` exercise arithmetic, branching, and
 independent control-flow chains for long enough to amortize executor startup.

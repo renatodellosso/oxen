@@ -74,6 +74,13 @@ TEST_F(BenchmarkFixture, CountsTheSameInstructionsAcrossThreadCounts) {
             singleThreaded.executedInstructions);
 }
 
+TEST_F(BenchmarkFixture, EmptyProgramEstimatesExecutorStartup) {
+  TrialResult startup = runEmptyTrial(2);
+
+  EXPECT_GE(startup.runTime.count(), 0);
+  EXPECT_EQ(startup.executedInstructions, 0);
+}
+
 TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
   writeProgram("simple.ox", "int value = 1; value = value + 2;");
   std::ostringstream output;
@@ -84,8 +91,12 @@ TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
   EXPECT_GE(aggregate.totalRunTime.count(), 0);
   ASSERT_EQ(aggregate.byThread.size(), 2);
   EXPECT_EQ(aggregate.byThread[0].threads, 1);
+  EXPECT_GE(aggregate.byThread[0].estimatedStartupTime.count(), 0);
+  EXPECT_EQ(aggregate.byThread[0].trialCount, 1);
   EXPECT_GT(aggregate.byThread[0].executedInstructions, 0);
   EXPECT_EQ(aggregate.byThread[1].threads, 2);
+  EXPECT_GE(aggregate.byThread[1].estimatedStartupTime.count(), 0);
+  EXPECT_EQ(aggregate.byThread[1].trialCount, 1);
   EXPECT_GT(aggregate.byThread[1].executedInstructions, 0);
   EXPECT_EQ(aggregate.executedInstructions,
             aggregate.byThread[0].executedInstructions +

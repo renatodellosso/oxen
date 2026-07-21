@@ -15,6 +15,18 @@ double nanosecondsPerInstruction(Nanoseconds totalRunTime,
          static_cast<double>(executedInstructions);
 }
 
+Nanoseconds adjustedRunTime(const ThreadAggregateSummary &summary) {
+  const Nanoseconds startupTime =
+      summary.estimatedStartupTime * summary.trialCount;
+  return summary.totalRunTime > startupTime
+             ? summary.totalRunTime - startupTime
+             : Nanoseconds::zero();
+}
+
+std::string formatDuration(Nanoseconds time) {
+  return time == Nanoseconds::zero() ? "0ns" : formatNs(time);
+}
+
 } // namespace
 
 void printHeader(std::ostream &output, const std::filesystem::path &root,
@@ -50,27 +62,35 @@ void printAggregateSummary(std::ostream &output,
         "No bytecode instructions were executed by the benchmarks");
 
   output << '\n';
+  Nanoseconds adjustedTotalRunTime = Nanoseconds::zero();
   for (const ThreadAggregateSummary &threadSummary : summary.byThread) {
     if (threadSummary.executedInstructions == 0)
       throw std::runtime_error(std::format(
           "No bytecode instructions were executed with {} threads",
           threadSummary.threads));
 
+    const Nanoseconds adjustedThreadRunTime = adjustedRunTime(threadSummary);
+    adjustedTotalRunTime += adjustedThreadRunTime;
     output << std::format(
         "threads={} time_per_bytecode_instruction={:.3f}ns "
-        "total_run_time={} total_executed_instructions={}\n",
+        "adjusted_run_time={} total_run_time={} "
+        "estimated_startup_time={} total_executed_instructions={}\n",
         threadSummary.threads,
-        nanosecondsPerInstruction(threadSummary.totalRunTime,
+        nanosecondsPerInstruction(adjustedThreadRunTime,
                                   threadSummary.executedInstructions),
+        formatDuration(adjustedThreadRunTime),
         formatNs(threadSummary.totalRunTime),
+        formatDuration(threadSummary.estimatedStartupTime),
         threadSummary.executedInstructions);
   }
 
   output << std::format(
       "overall time_per_bytecode_instruction={:.3f}ns "
-      "total_run_time={} total_executed_instructions={}\n",
-      nanosecondsPerInstruction(summary.totalRunTime,
+      "adjusted_run_time={} total_run_time={} "
+      "total_executed_instructions={}\n",
+      nanosecondsPerInstruction(adjustedTotalRunTime,
                                 summary.executedInstructions),
+      formatDuration(adjustedTotalRunTime),
       formatNs(summary.totalRunTime),
       summary.executedInstructions);
 }
