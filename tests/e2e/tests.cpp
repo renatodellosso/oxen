@@ -1,6 +1,9 @@
 #include "tests.hpp"
 
 std::vector<E2eTest> tests = {
+    // Empty programs
+    {"EmptyProgramsAreAllowed", "", ExpectUnordered({})},
+
     // Print statements
     {"PrintWorksWithNumbers", "print 1;", ExpectUnordered({"1"})},
     {"PrintWorksWithStrings", "print \"abc\";", ExpectUnordered({"abc"})},

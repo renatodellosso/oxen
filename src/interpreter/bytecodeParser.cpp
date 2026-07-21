@@ -170,7 +170,7 @@ void BytecodeParser::buildSingleInstruction() {
 }
 
 void BytecodeParser::buildInstructions() {
-  while (!stream.fail()) {
+  while (stream.peek() != std::istream::traits_type::eof()) {
     buildSingleInstruction();
 
     stream.get(); // Consume '\n'

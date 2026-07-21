@@ -3,6 +3,16 @@
 #include <format>
 #include <gtest/gtest.h>
 
+TEST(buildInstructions, acceptsEmptyBytecode) {
+  std::istringstream stream("");
+  std::vector<Instruction> instrs;
+
+  BytecodeParser parser({}, instrs, stream);
+  parser.buildInstructions();
+
+  EXPECT_TRUE(instrs.empty());
+}
+
 TEST(buildInstructions, buildsSingleInstruction) {
   DISABLE_COUT
 
