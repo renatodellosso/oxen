@@ -24,7 +24,7 @@ You can compile Oxen into the `build` folder with `cmake --build build`. Once yo
 
 ## How does it work?
 
-Oxen uses a Just-In-Time (JIT) compiler to compile Oxen source code into bytecode, which is then interpreted by the Oxen interpreter. Programs are transformed into graphs, with instructions being vertices and dependencies between them being edges. The graph is converted to a bytecode format, which can then be interpreted.
+Oxen compiles Oxen source code into bytecode, which is then interpreted by the Oxen interpreter. Programs are transformed into graphs, with instructions being vertices and dependencies between them being edges. The graph is converted to a bytecode format, which can then be interpreted.
 
 ## Language Features
 
