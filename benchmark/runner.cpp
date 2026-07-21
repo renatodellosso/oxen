@@ -60,6 +60,5 @@ TrialResult runTrial(const Program &program, int threads) {
   return {.compileTime = std::chrono::duration_cast<Nanoseconds>(compileEnd -
                                                                  compileStart),
           .runTime = std::chrono::duration_cast<Nanoseconds>(runEnd - runStart),
-          .executedInstructions =
-              stats.executedInstructions.load(std::memory_order_relaxed)};
+          .executedInstructions = stats.executedInstructions};
 }

@@ -1,9 +1,12 @@
 #include "../../benchmark/application.hpp"
 #include "../../benchmark/discovery.hpp"
 #include "../../benchmark/runner.hpp"
+#include <algorithm>
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace {
 

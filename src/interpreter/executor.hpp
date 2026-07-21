@@ -12,7 +12,7 @@
 #include <vector>
 
 struct ExecutionStats {
-  std::atomic_uint64_t executedInstructions;
+  std::uint64_t executedInstructions;
 
   ExecutionStats();
 };
@@ -23,6 +23,7 @@ class Executor {
   ExecutionStats *stats;
   ConcurrentQueue<std::reference_wrapper<Instruction>> queue;
   std::vector<std::thread> workers;
+  std::vector<std::uint64_t> executedInstructionsByWorker;
   std::atomic_int pendingTasks;
   std::atomic_uint64_t nextCallInvocationId;
 
@@ -46,7 +47,8 @@ class Executor {
   void enqueueIfReady(Instruction &instr);
   // Use recurse = true at the root level for skipping blocks
   void skipInstruction(Instruction &instr, bool markSkippedAs = true);
-  void execSingleInstruction(Instruction &instr);
+  void execSingleInstruction(Instruction &instr,
+                             std::uint64_t &executedInstructions);
 
   // Multithreaded worker that actually executes instructions
   void execWorker(int id);

@@ -57,21 +57,52 @@ TEST_F(BenchmarkFixture, SharedExecutionCompilesAndCollectsStatistics) {
   std::istringstream bytecodeStream(bytecode);
   ExecutionStats stats;
   EXPECT_NO_THROW(executeBytecode(args, bytecodeStream, &stats));
-  EXPECT_GT(stats.executedInstructions.load(), 0);
+  EXPECT_GT(stats.executedInstructions, 0);
+}
+
+TEST_F(BenchmarkFixture, CountsTheSameInstructionsAcrossThreadCounts) {
+  auto path = writeProgram(
+      "instruction-count.ox",
+      "int value = 0; while (value < 100) { value = value + 1; }");
+  Program program{.group = "smoke", .name = "instruction-count", .path = path};
+
+  TrialResult singleThreaded = runTrial(program, 1);
+  TrialResult multiThreaded = runTrial(program, 16);
+
+  EXPECT_GT(singleThreaded.executedInstructions, 0);
+  EXPECT_EQ(multiThreaded.executedInstructions,
+            singleThreaded.executedInstructions);
 }
 
 TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
   writeProgram("simple.ox", "int value = 1; value = value + 2;");
   std::ostringstream output;
 
-  auto aggregate = run({.trials = 1, .threads = {1}}, root, output);
+  auto aggregate = run({.trials = 1, .threads = {1, 2}}, root, output);
 
   EXPECT_GT(aggregate.executedInstructions, 0);
   EXPECT_GE(aggregate.totalRunTime.count(), 0);
+  ASSERT_EQ(aggregate.byThread.size(), 2);
+  EXPECT_EQ(aggregate.byThread[0].threads, 1);
+  EXPECT_GT(aggregate.byThread[0].executedInstructions, 0);
+  EXPECT_EQ(aggregate.byThread[1].threads, 2);
+  EXPECT_GT(aggregate.byThread[1].executedInstructions, 0);
+  EXPECT_EQ(aggregate.executedInstructions,
+            aggregate.byThread[0].executedInstructions +
+                aggregate.byThread[1].executedInstructions);
+  EXPECT_EQ(aggregate.totalRunTime, aggregate.byThread[0].totalRunTime +
+                                        aggregate.byThread[1].totalRunTime);
   EXPECT_THAT(output.str(), HasSubstr("smoke\n"));
   EXPECT_THAT(output.str(), HasSubstr("simple"));
-  EXPECT_THAT(output.str(), HasSubstr("threads=1"));
-  EXPECT_THAT(output.str(), HasSubstr("time_per_bytecode_instruction="));
+  EXPECT_THAT(
+      output.str(),
+      HasSubstr("threads=1 time_per_bytecode_instruction="));
+  EXPECT_THAT(
+      output.str(),
+      HasSubstr("threads=2 time_per_bytecode_instruction="));
+  EXPECT_THAT(
+      output.str(),
+      HasSubstr("overall time_per_bytecode_instruction="));
 }
 
 TEST_F(BenchmarkFixture, ReportsInvalidSourceWithProgramPath) {

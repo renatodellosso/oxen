@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -341,9 +342,10 @@ void Executor::skipInstruction(Instruction &instr, bool markSkippedAs) {
   }
 }
 
-void Executor::execSingleInstruction(Instruction &instr) {
+void Executor::execSingleInstruction(Instruction &instr,
+                                     std::uint64_t &executedInstructions) {
   if (stats)
-    stats->executedInstructions.fetch_add(1, std::memory_order_relaxed);
+    executedInstructions++;
 
   if (cliArgs.verbose)
     log(LOCATION, "Executing instruction: {}", instr.toString());
@@ -971,6 +973,7 @@ void Executor::execSingleInstruction(Instruction &instr) {
 
 void Executor::execWorker(int id) {
   auto location = LOCATION + std::string(":worker") + std::to_string(id);
+  std::uint64_t executedInstructions = 0;
   if (cliArgs.verbose)
     log(location.c_str(), "Worker {} awake", id);
 
@@ -998,7 +1001,7 @@ void Executor::execWorker(int id) {
     }
 
     try {
-      execSingleInstruction(instr);
+      execSingleInstruction(instr, executedInstructions);
     } catch (std::runtime_error err) {
       logError(location.c_str(), "[instruction {}] {}", instr.id, err.what());
       haltCause = std::format("Runtime Error in worker {} [instruction {}]: {}",
@@ -1008,6 +1011,9 @@ void Executor::execWorker(int id) {
     }
     pendingTasks.fetch_sub(1);
   }
+
+  if (stats)
+    executedInstructionsByWorker[id] = executedInstructions;
 }
 
 void Executor::supervisor() {
@@ -1030,6 +1036,11 @@ void Executor::supervisor() {
       workers[i].join();
     }
   }
+
+  if (stats)
+    stats->executedInstructions +=
+        std::accumulate(executedInstructionsByWorker.begin(),
+                        executedInstructionsByWorker.end(), std::uint64_t{0});
 }
 
 void Executor::initQueue() {
@@ -1083,6 +1094,7 @@ void Executor::startExecution() {
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
                    ExecutionStats *stats)
     : cliArgs(cliArgs), program(program), stats(stats),
+      executedInstructionsByWorker(cliArgs.threads, 0),
       pendingTasks(0), nextCallInvocationId(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),

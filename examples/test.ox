@@ -1,18 +1,9 @@
-int a;
-a = 2;
-int b = 5;
-
-bool isPositive(int x) {
-  if (x > 0) {
-    return true;
-  } else {
-    return false;
-  }
+int fibonacci(int n) {
+  if (n == 1)
+    return 1;
+  if (n == 2)
+    return 1;
+  return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-print "a is positive: " + isPositive(a);
-
-while (isPositive(b)) {
-  print "b is: " + b;
-  b = b - 1;
-}
+print fibonacci(20);

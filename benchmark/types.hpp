@@ -35,7 +35,14 @@ struct ProgramSummary {
   std::uint64_t executedInstructions = 0;
 };
 
+struct ThreadAggregateSummary {
+  int threads = 0;
+  Nanoseconds totalRunTime = Nanoseconds::zero();
+  std::uint64_t executedInstructions = 0;
+};
+
 struct AggregateSummary {
   Nanoseconds totalRunTime = Nanoseconds::zero();
   std::uint64_t executedInstructions = 0;
+  std::vector<ThreadAggregateSummary> byThread;
 };

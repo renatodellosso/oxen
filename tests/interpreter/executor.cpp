@@ -101,6 +101,29 @@ TEST(startExecution, doesntError) {
   REENABLE_COUT
 }
 
+TEST(startExecution, sumsInstructionCountsFromMultipleWorkers) {
+  constexpr int instructionCount = 512;
+  std::vector<Instruction> instrs;
+  instrs.reserve(instructionCount);
+  for (int id = 0; id < instructionCount; id++) {
+    instrs.emplace_back(id);
+    instrs.back().type = InstructionType::GetLiteral;
+    instrs.back().bytecodeArgs.push_back(
+        {.type = ValueType::Integer, .val = id});
+  }
+
+  Subprogram program(
+      std::make_shared<std::vector<Instruction>>(std::move(instrs)));
+  ExecutionStats stats;
+  Executor executor({.threads = 16}, program, &stats);
+
+  DISABLE_COUT
+  EXPECT_NO_THROW(executor.startExecution());
+  REENABLE_COUT
+
+  EXPECT_EQ(stats.executedInstructions, instructionCount);
+}
+
 TEST(startExecution, populatesDepArgs) {
   DISABLE_COUT
 

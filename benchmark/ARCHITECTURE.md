@@ -41,8 +41,8 @@ arguments so the workflow can be exercised in-process by tests.
   redirected during execution so it does not contaminate the report.
 - `results.*` reduces a set of trials into totals and maxima without performing
   I/O or measuring time.
-- `report.*` formats headers, per-program summaries, and the aggregate
-  nanoseconds-per-instruction result to a supplied stream.
+- `report.*` formats headers, per-program summaries, and the per-thread and
+  overall nanoseconds-per-instruction results to a supplied stream.
 - `types.hpp` contains the data passed between these modules.
 
 ## Shared compiler and interpreter paths
@@ -66,13 +66,21 @@ the measured program.
 Each `TrialResult` contains compile time, run time, and executed instructions.
 `ProgramSummary` stores totals and maxima for one program/thread-count pair.
 `AggregateSummary` contains total execution time and instruction count across
-the entire run.
+the entire run, plus the corresponding totals for each requested thread count.
 
 Compilation timing covers source compilation into bytecode. Execution timing
 covers bytecode parsing, program construction, executor startup, and execution;
-it does not include compilation or report formatting. The final
-time-per-instruction value is aggregate run time divided by aggregate executed
-instructions. A run that executes no instructions is treated as an error.
+it does not include compilation or report formatting. Each time-per-instruction
+value is aggregate run time divided by aggregate executed instructions for
+either one requested thread count or the entire run. A run that executes no
+instructions is treated as an error.
+
+Programs in `benchmarks/longRunning` exercise arithmetic, branching, and
+independent control-flow chains for long enough to amortize executor startup.
+The regression suite requires at least two programs in this group and at least
+250,000 dynamically executed bytecode instructions from each program with one
+worker. The instruction threshold keeps this contract deterministic across
+machines; elapsed time remains a measured result rather than a test assertion.
 
 ## Errors and tests
 

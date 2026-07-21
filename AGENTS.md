@@ -8,4 +8,4 @@
 # Commands
 - Build with `cmake --build build`.
 - Run the tests with `build/Tests`.
-- Run a file in the project's programming language with `build/CLI -t <file>`,
+- Run a file in the project's programming language with `build/CLI -t <file>`. Add `-e` for verbose mode.

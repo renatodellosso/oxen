@@ -31,9 +31,22 @@ TEST(BenchmarkReport, PrintsStableHeaderAndProgramFields) {
 
 TEST(BenchmarkReport, PrintsAggregateAndRejectsZeroInstructions) {
   std::ostringstream output;
-  printAggregateSummary(
-      output, {.totalRunTime = 20ns, .executedInstructions = 4});
-  EXPECT_THAT(output.str(), HasSubstr("time_per_bytecode_instruction=5.000ns"));
+  printAggregateSummary(output,
+                        {.totalRunTime = 20ns,
+                         .executedInstructions = 4,
+                         .byThread = {{.threads = 1,
+                                       .totalRunTime = 6ns,
+                                       .executedInstructions = 3},
+                                      {.threads = 4,
+                                       .totalRunTime = 14ns,
+                                       .executedInstructions = 1}}});
+  EXPECT_THAT(output.str(),
+              HasSubstr("threads=1 time_per_bytecode_instruction=2.000ns"));
+  EXPECT_THAT(output.str(),
+              HasSubstr("threads=4 time_per_bytecode_instruction=14.000ns"));
+  EXPECT_THAT(
+      output.str(),
+      HasSubstr("overall time_per_bytecode_instruction=5.000ns"));
   EXPECT_THAT(output.str(), HasSubstr("total_executed_instructions=4"));
 
   EXPECT_THROW(printAggregateSummary(output, {}), std::runtime_error);

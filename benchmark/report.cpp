@@ -9,6 +9,12 @@ std::string formatAverage(Nanoseconds total, int count) {
   return formatNs(total / count);
 }
 
+double nanosecondsPerInstruction(Nanoseconds totalRunTime,
+                                 std::uint64_t executedInstructions) {
+  return static_cast<double>(totalRunTime.count()) /
+         static_cast<double>(executedInstructions);
+}
+
 } // namespace
 
 void printHeader(std::ostream &output, const std::filesystem::path &root,
@@ -43,12 +49,28 @@ void printAggregateSummary(std::ostream &output,
     throw std::runtime_error(
         "No bytecode instructions were executed by the benchmarks");
 
-  double nsPerInstruction =
-      static_cast<double>(summary.totalRunTime.count()) /
-      static_cast<double>(summary.executedInstructions);
+  output << '\n';
+  for (const ThreadAggregateSummary &threadSummary : summary.byThread) {
+    if (threadSummary.executedInstructions == 0)
+      throw std::runtime_error(std::format(
+          "No bytecode instructions were executed with {} threads",
+          threadSummary.threads));
+
+    output << std::format(
+        "threads={} time_per_bytecode_instruction={:.3f}ns "
+        "total_run_time={} total_executed_instructions={}\n",
+        threadSummary.threads,
+        nanosecondsPerInstruction(threadSummary.totalRunTime,
+                                  threadSummary.executedInstructions),
+        formatNs(threadSummary.totalRunTime),
+        threadSummary.executedInstructions);
+  }
+
   output << std::format(
-      "\ntime_per_bytecode_instruction={:.3f}ns "
+      "overall time_per_bytecode_instruction={:.3f}ns "
       "total_run_time={} total_executed_instructions={}\n",
-      nsPerInstruction, formatNs(summary.totalRunTime),
+      nanosecondsPerInstruction(summary.totalRunTime,
+                                summary.executedInstructions),
+      formatNs(summary.totalRunTime),
       summary.executedInstructions);
 }
