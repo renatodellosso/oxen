@@ -20,7 +20,7 @@ std::vector<Program> discoverPrograms(const std::filesystem::path &root) {
     for (const auto &programEntry :
          std::filesystem::directory_iterator(groupEntry.path())) {
       if (!programEntry.is_regular_file() ||
-          programEntry.path().extension() != ".p")
+          programEntry.path().extension() != ".ox")
         continue;
 
       programs.push_back({.group = group,
@@ -37,7 +37,7 @@ std::vector<Program> discoverPrograms(const std::filesystem::path &root) {
 
   if (programs.empty())
     throw std::runtime_error(std::format(
-        "No .p benchmark programs found under '{}'", root.string()));
+        "No .ox benchmark programs found under '{}'", root.string()));
 
   return programs;
 }

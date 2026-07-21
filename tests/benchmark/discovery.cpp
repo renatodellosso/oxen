@@ -33,11 +33,12 @@ TEST(BenchmarkDiscovery, FindsProgramsInDeterministicOrder) {
   TemporaryDirectory temporary;
   std::filesystem::create_directories(temporary.path / "zeta");
   std::filesystem::create_directories(temporary.path / "alpha");
-  touch(temporary.path / "zeta" / "second.p");
-  touch(temporary.path / "alpha" / "two.p");
-  touch(temporary.path / "alpha" / "one.p");
+  touch(temporary.path / "zeta" / "second.ox");
+  touch(temporary.path / "alpha" / "two.ox");
+  touch(temporary.path / "alpha" / "one.ox");
+  touch(temporary.path / "alpha" / "legacy.p");
   touch(temporary.path / "alpha" / "ignored.txt");
-  touch(temporary.path / "top-level.p");
+  touch(temporary.path / "top-level.ox");
 
   auto programs = discoverPrograms(temporary.path);
 

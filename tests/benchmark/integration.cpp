@@ -61,7 +61,7 @@ TEST_F(BenchmarkFixture, SharedExecutionCompilesAndCollectsStatistics) {
 }
 
 TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
-  writeProgram("simple.p", "int value = 1; value = value + 2;");
+  writeProgram("simple.ox", "int value = 1; value = value + 2;");
   std::ostringstream output;
 
   auto aggregate = run({.trials = 1, .threads = {1}}, root, output);
@@ -75,7 +75,7 @@ TEST_F(BenchmarkFixture, RunsCompleteBenchmarkWorkflow) {
 }
 
 TEST_F(BenchmarkFixture, ReportsInvalidSourceWithProgramPath) {
-  auto path = writeProgram("invalid.p", "this is not valid;");
+  auto path = writeProgram("invalid.ox", "this is not valid;");
   Program program{.group = "smoke", .name = "invalid", .path = path};
   std::ostringstream ignored;
   ScopedStreamRedirect redirect(std::cout, ignored.rdbuf());
@@ -90,7 +90,7 @@ TEST_F(BenchmarkFixture, ReportsInvalidSourceWithProgramPath) {
 }
 
 TEST_F(BenchmarkFixture, ReportsUnreadableSourceWithProgramPath) {
-  auto path = root / "smoke" / "missing.p";
+  auto path = root / "smoke" / "missing.ox";
   Program program{.group = "smoke", .name = "missing", .path = path};
   EXPECT_THROW(
       {
@@ -105,7 +105,8 @@ TEST_F(BenchmarkFixture, ReportsUnreadableSourceWithProgramPath) {
 }
 
 TEST_F(BenchmarkFixture, ReportsExecutionCauseWithProgramPath) {
-  auto path = writeProgram("invalid-operation.p", "bool value = true < false;");
+  auto path =
+      writeProgram("invalid-operation.ox", "bool value = true < false;");
   Program program{.group = "smoke", .name = "invalid-operation", .path = path};
 
   try {

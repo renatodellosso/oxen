@@ -33,7 +33,7 @@ arguments so the workflow can be exercised in-process by tests.
 - `application.*` coordinates discovery, trials, aggregation, and reporting.
 - `options.*` parses `--trials` and `--threads`. Values must be positive
   integers, and malformed comma-separated thread lists are rejected.
-- `discovery.*` finds `.p` files one directory below the benchmark root. The
+- `discovery.*` finds `.ox` files one directory below the benchmark root. The
   directory name becomes the group, and results are sorted by group and program
   name for deterministic output.
 - `runner.*` performs one compile-and-execute trial. It records steady-clock

@@ -21,7 +21,7 @@ TEST_P(E2EFixture, E2E) {
 
   // Ensure folder exists
   std::filesystem::create_directory(folder);
-  auto fileName = folder + "/" + getTestName(test, threads) + ".p";
+  auto fileName = folder + "/" + getTestName(test, threads) + ".ox";
 
   CliArgs args = {.target = fileName,
                   .mode = CliMode::CompileAndInterpret,
