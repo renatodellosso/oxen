@@ -1,14 +1,18 @@
-int sum = 0;
+int a;
+a = 2;
+int b = 5;
 
-int j = 0;
-while (j < 2) {
-  int k = 0;
-  while (k < 2) {
-    print "k: " + k;
-    k = k + 1;
-    sum = sum + 1;
+bool isPositive(int x) {
+  if (x > 0) {
+    return true;
+  } else {
+    return false;
   }
-  j = j + 1;
 }
 
-print "Sum: " + sum;
+print "a is positive: " + isPositive(a);
+
+while (isPositive(b)) {
+  print "b is: " + b;
+  b = b - 1;
+}
