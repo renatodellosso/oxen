@@ -16,50 +16,50 @@ int fi = 0;
 int gi = 0;
 int hi = 0;
 
-while (ai < 4000) {
-  if (ai < 2000) a = a + 2;
+while (ai < 40) {
+  if (ai < 20) a = a + 2;
   else a = a - 1;
   ai = ai + 1;
 }
 
-while (bi < 4000) {
-  if (bi < 2100) b = b + 2;
+while (bi < 40) {
+  if (bi < 21) b = b + 2;
   else b = b - 1;
   bi = bi + 1;
 }
 
-while (ci < 4000) {
-  if (ci < 2200) c = c + 2;
+while (ci < 40) {
+  if (ci < 22) c = c + 2;
   else c = c - 1;
   ci = ci + 1;
 }
 
-while (di < 4000) {
-  if (di < 2300) d = d + 2;
+while (di < 40) {
+  if (di < 23) d = d + 2;
   else d = d - 1;
   di = di + 1;
 }
 
-while (ei < 4000) {
-  if (ei < 2400) e = e + 2;
+while (ei < 40) {
+  if (ei < 24) e = e + 2;
   else e = e - 1;
   ei = ei + 1;
 }
 
-while (fi < 4000) {
-  if (fi < 2500) f = f + 2;
+while (fi < 40) {
+  if (fi < 25) f = f + 2;
   else f = f - 1;
   fi = fi + 1;
 }
 
-while (gi < 4000) {
-  if (gi < 2600) g = g + 2;
+while (gi < 40) {
+  if (gi < 26) g = g + 2;
   else g = g - 1;
   gi = gi + 1;
 }
 
-while (hi < 4000) {
-  if (hi < 2700) h = h + 2;
+while (hi < 40) {
+  if (hi < 27) h = h + 2;
   else h = h - 1;
   hi = hi + 1;
 }

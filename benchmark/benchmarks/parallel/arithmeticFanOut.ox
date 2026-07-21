@@ -7,42 +7,42 @@ int f = 0;
 int g = 0;
 int h = 0;
 
-while (a < 6000) {
+while (a < 60) {
   a = a + 2;
   a = a - 1;
 }
 
-while (b < 6000) {
+while (b < 60) {
   b = b + 3;
   b = b - 2;
 }
 
-while (c < 6000) {
+while (c < 60) {
   c = c + 4;
   c = c - 3;
 }
 
-while (d < 6000) {
+while (d < 60) {
   d = d + 5;
   d = d - 4;
 }
 
-while (e < 6000) {
+while (e < 60) {
   e = e + 6;
   e = e - 5;
 }
 
-while (f < 6000) {
+while (f < 60) {
   f = f + 7;
   f = f - 6;
 }
 
-while (g < 6000) {
+while (g < 60) {
   g = g + 8;
   g = g - 7;
 }
 
-while (h < 6000) {
+while (h < 60) {
   h = h + 9;
   h = h - 8;
 }

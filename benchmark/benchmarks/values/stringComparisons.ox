@@ -6,3 +6,38 @@ print lower == "alpha";
 print lower != upper;
 print ordered;
 print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;
+
+print lower == "alpha";
+print lower != upper;
+print ordered;
+print upper >= lower;

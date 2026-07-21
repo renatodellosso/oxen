@@ -7,35 +7,35 @@ int f = 0;
 int g = 0;
 int h = 0;
 
-while (a < 5000) {
+while (a < 50) {
   a = a + 1;
 }
 
-while (b < 5000) {
+while (b < 50) {
   b = b + 1;
 }
 
-while (c < 5000) {
+while (c < 50) {
   c = c + 1;
 }
 
-while (d < 5000) {
+while (d < 50) {
   d = d + 1;
 }
 
-while (e < 5000) {
+while (e < 50) {
   e = e + 1;
 }
 
-while (f < 5000) {
+while (f < 50) {
   f = f + 1;
 }
 
-while (g < 5000) {
+while (g < 50) {
   g = g + 1;
 }
 
-while (h < 5000) {
+while (h < 50) {
   h = h + 1;
 }
 
