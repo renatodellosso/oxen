@@ -1,8 +1,8 @@
 int value = 0;
 int i = 0;
 
-while (i < 250) {
-  if (i < 125) {
+while (i < 5) {
+  if (i < 2) {
     value = value + 2;
     value = value + 2;
     value = value + 2;

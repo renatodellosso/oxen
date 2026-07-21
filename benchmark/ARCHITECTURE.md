@@ -90,7 +90,14 @@ machines; elapsed time remains a measured result rather than a test assertion.
 Programs in `benchmarks/parallel` focus on workloads that expose useful DAG
 width: independent control-flow lanes perform the substantial work and join
 only when their results are reduced. The group covers flat arithmetic and
-branch-heavy fan-out, heterogeneous lanes, and a wide fork/join reduction.
+branch-heavy fan-out, heterogeneous lanes, a wide fork/join reduction, and
+coarse string workloads. The bulk, growth, and doubling programs make each
+independent operation large enough to amortize instruction scheduling and are
+intended to demonstrate multi-worker speedup in a Release build. Speedup is
+reported by the benchmark rather than asserted by tests because timing depends
+on the host and its current load. The balanced string quadrupling and
+quintupling programs are sized to saturate roughly four workers before memory
+bandwidth and executor synchronization outweigh additional parallelism.
 
 ## Errors and tests
 
