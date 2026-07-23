@@ -66,3 +66,7 @@ while (isPositive(b)) {
   b = b - 1;
 }
 ```
+
+## Docs
+
+There's a set of AI-generated documentation for Oxen's internals in the `docs` folder. It's meant as an aid to myself when working on Oxen, so it's not the most polished.
