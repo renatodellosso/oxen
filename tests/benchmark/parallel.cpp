@@ -15,6 +15,7 @@ const std::filesystem::path bundledBenchmarkRoot = "benchmark/benchmarks";
 
 TEST(BenchmarkParallel, CoarseProgramsAreStableAcrossWorkerCounts) {
   const std::vector<Program> programs = discoverPrograms(bundledBenchmarkRoot);
+  constexpr int targetWorkers = 4;
   const std::vector<std::pair<std::string, std::uint64_t>> coarsePrograms = {
       {"balancedStringQuadruplingFanOut", 1500},
       {"balancedStringQuintuplingFanOut", 1500},
@@ -32,11 +33,9 @@ TEST(BenchmarkParallel, CoarseProgramsAreStableAcrossWorkerCounts) {
     TrialResult baseline = runTrial(*program, 1);
     EXPECT_GE(baseline.executedInstructions, minimumInstructions) << name;
 
-    for (int threads : {2, 4, 8, 16}) {
-      SCOPED_TRACE(name + " with " + std::to_string(threads) + " workers");
-      TrialResult concurrent = runTrial(*program, threads);
-      EXPECT_EQ(concurrent.executedInstructions,
-                baseline.executedInstructions);
-    }
+    SCOPED_TRACE(name + " with " + std::to_string(targetWorkers) +
+                 " workers");
+    TrialResult concurrent = runTrial(*program, targetWorkers);
+    EXPECT_EQ(concurrent.executedInstructions, baseline.executedInstructions);
   }
 }

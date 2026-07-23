@@ -85,3 +85,8 @@ Check that instruction counts remain stable across worker counts before
 interpreting timing. If counts differ, investigate scheduling/completion
 semantics first; the timing comparison is not measuring equivalent work.
 
+CI uses one trial at one and four workers to validate the benchmark path within
+hosted-runner resource limits. It is not a performance result. Run larger trial
+counts or the full worker matrix separately when collecting measurements; the
+coarse string workloads intentionally allocate enough data to make repeated
+all-worker runs unsuitable for a single correctness-test process.

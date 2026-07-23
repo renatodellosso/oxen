@@ -99,6 +99,12 @@ on the host and its current load. The balanced string quadrupling and
 quintupling programs are sized to saturate roughly four workers before memory
 bandwidth and executor synchronization outweigh additional parallelism.
 
+The coarse-string regression compares one worker with four workers, the target
+parallelism for these workloads. Running every coarse program at every supported
+worker count in one test process retains enough allocator memory to exceed some
+hosted CI limits without adding a distinct correctness assertion. Lightweight
+integration and E2E tests continue to cover the wider worker-count range.
+
 ## Errors and tests
 
 Internal benchmark failures use exceptions with relevant paths or exit codes.
@@ -113,3 +119,7 @@ temporary benchmark trees and invoke the workflow directly with one trial and
 one thread. CMake links every benchmark source except `main.cpp` into the test
 binary, allowing tests to call the same implementation used by the benchmark
 executable.
+
+CI invokes the benchmark with one trial at one and four workers. This is a
+cross-platform execution smoke test; performance measurements should use the
+desired trial and worker matrix on an otherwise idle machine.
