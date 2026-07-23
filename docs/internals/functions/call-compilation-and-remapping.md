@@ -8,7 +8,7 @@ Resource ordering needs more than a direct edge to the call. The linker's call-a
 
 ## Concrete bytecode evidence
 
-Given:
+The following source provides a minimal example:
 
 ```parallel
 int identity(int value) {
@@ -17,7 +17,7 @@ int identity(int value) {
 print identity(5);
 ```
 
-save it as `/tmp/call.ox` and compile annotated bytecode with:
+Save the source as `/tmp/call.ox` and compile annotated bytecode with:
 
 ```sh
 build/CLI -t /tmp/call.ox -c -o /tmp/call.bytecode -d
@@ -36,4 +36,8 @@ above. The focused unit run passed `linkGraph.setsCallDepRemaps`, while
 [`waitsForTerminalCallSideEffectsAfterDependencyRemapping`](../../../tests/interpreter/executor.cpp)
 passed with 16 workers.
 
-Never store an unordered-set position during linking, and never mutate reusable `InstrDependent` edges with invocation state.
+Never store an unordered-set position during linking, and never mutate reusable
+`InstrDependent` edges with invocation state. When changing the payload, update
+`UnaryCallExpression::toByteCode()`, the parse helpers
+in `executor.cpp`, and the graph-linker and executor tests named above in the
+same change.

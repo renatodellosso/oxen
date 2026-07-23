@@ -28,3 +28,13 @@ and `fallback`.
 passed at 16 workers.
 
 Symptoms of broken isolation are duplicated fallback results, missing call results, or one invocation claiming another invocation's return.
+
+## Change workflow
+
+A contributor changing return lowering must keep the serialized return IDs in
+`UnaryCallExpression::toByteCode()` aligned with
+`parseReturnIdsFromBytecodeArgs()` in `executor.cpp`. A focused executor test
+should create several simultaneous invocations with different reachable
+branches and compare results without assuming global print order. The E2E
+regression above separately verifies the language rule that statements after a
+return still run.

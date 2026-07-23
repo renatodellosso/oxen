@@ -34,7 +34,7 @@ The distinction is important: compiler resources describe ordering and function 
 
 ## Concrete observed examples
 
-I ran:
+The following focused command exercises compiler and runtime shadowing:
 
 ```sh
 build/Tests --gtest_filter='get.*:alloc.*:linkGraph.allowsVariableShadowing:E2E/E2EFixture.E2E/NestedBlocksCanShadowEnclosingVariables1:E2E/E2EFixture.E2E/CallsWithArgumentsDoNotShareParameterScopes16'
@@ -48,7 +48,9 @@ Observed: all selected tests passed. `alloc.canShadowEnclosingVar` confirmed cur
 - Scope objects and stored objects use shared ownership because instruction graphs and function captures outlive local parser/linker stack frames.
 - Keep compiler scope lifetime counts aligned with flattened instruction counts.
 - Do not call `get()`, `contains()`, or use a `getVarTable()` reference while
-  another thread may call `alloc()` on the same scope; the current iterator
-  lifetime is not protected through lookup completion.
-- `getKeys()` merges names, not binding identities; use `get(name)` pointer equality when determining which lexical binding is meant.
-- New runtime parallelism must audit mutation of pointed-to `Value` objects separately from the map's mutex.
+  another thread may call `alloc()` on the same scope; the current
+  iterator lifetime is not protected through lookup completion.
+- `getKeys()` merges names, not binding identities; use `get(name)` pointer
+  equality when determining which lexical binding is meant.
+- A change that adds runtime parallelism must audit mutation of pointed-to
+  `Value` objects separately from the map's mutex.

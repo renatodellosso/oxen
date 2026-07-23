@@ -15,12 +15,14 @@ After collecting a word, exact raw values classify `true`/`false` as bool litera
 - `-123` is one literal, but `- 123` is a subtraction token followed by a literal.
 - There is no comment syntax in source tokenization.
 - There is no escape decoding. The tokenizer retains raw string contents. Its current loop stops either after appending `"` or after appending any character whose immediately preceding character is `\\`; consequently, a backslash followed by a non-quote character terminates the string token early. This is implementation behavior, not a supported escape grammar.
-- Identifier continuation excludes `_`, although an unrecognized initial character takes the identifier path. Do not assume a conventional C identifier grammar without changing and testing it explicitly.
+- Identifier continuation excludes `_`, although an unrecognized initial
+  character takes the identifier path. Do not assume a conventional C
+  identifier grammar without changing and testing it explicitly.
 - Malformed/unrecognized characters are not rejected here: the default path produces identifiers and lets AST construction report contextual errors.
 
 ## Concrete observed examples
 
-I ran:
+The following command runs the focused tokenizer examples:
 
 ```sh
 build/Tests --gtest_filter='Tokenizer.*'
@@ -35,4 +37,10 @@ Observed: all 23 tokenizer tests passed. In particular:
 
 ## Change checklist
 
-When adding syntax, update `TokenType`, `parseToken()`, focused tokenizer tests, and the `AstBuilder` match/parse path. Test adjacency, whitespace, EOF, malformed input, and line accounting. Changing raw string representation also requires auditing `RootExpression::toByteCode()` and `BytecodeParser::buildArg()`, because serialization currently relies on quoted raw spelling.
+When adding syntax, update `TokenType`, `Tokenizer::parseToken()`, focused tests
+in [`tests/compiler/tokenizer.cpp`](../../../tests/compiler/tokenizer.cpp), and
+the `AstBuilder` match/parse path. Test adjacency, whitespace, EOF, malformed
+input, and line accounting. A raw-string representation change also requires
+auditing
+`RootExpression::toByteCode()` and `BytecodeParser::buildArg()`, because
+serialization currently relies on quoted raw spelling.

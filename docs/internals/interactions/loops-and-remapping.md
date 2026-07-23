@@ -7,3 +7,7 @@ At runtime the `Call` copies these static descriptions into invocation-local edg
 Debug compilation of the direct loop showed a serialized call with a dependent remap followed by `GoTo -8`; execution with 16 threads printed `loop-call=0`, `1`, `2`. The focused [`waitsForCallsInsideLoopIterations`](../../../tests/interpreter/executor.cpp#L551) test passed and additionally asserts reusable call dependents are not left disabled after execution.
 
 Invariant: remap descriptions are reusable and immutable; invocation completion state is fresh. Persistent mutation produces failures only on later iterations or concurrent calls.
+
+## Contributor workflow
+
+A remapping change should preserve `Expression *` identity in `UnaryCallExpression::depRemaps` until `toByteCode()` resolves the emitted dependent index. A compiler test should parse the call bytecode and prove that each remap index names the intended destination. The executor test should run at least two iterations and assert that static dependents were not left disabled; a repeated 16-worker E2E case should combine a callee write, a print, and loop advancement.

@@ -12,4 +12,10 @@ This behavior composes with joins and calls:
 
 The direct 16-thread run skipped `value = 9`, executed the else loop, and printed `branch-loop=2`. The focused run passed [`ElseBlocksCanContainLoops`](../../../tests/e2e/tests.cpp#L196), and the repository also covers zero iterations and nested completion in [`BranchLoopsCanRunZeroIterations`](../../../tests/e2e/tests.cpp#L206) and [`NestedBlocksPropagateLoopCompletion`](../../../tests/e2e/tests.cpp#L211).
 
-When adding a new control construct, decide separately which nested instructions are marked, which outgoing control edges receive null completion, and which value edges must remain unsatisfied. Treating all dependents alike is unsafe.
+When adding a new control construct, decide separately which nested instructions
+are marked, which outgoing control edges receive null completion, and which
+value edges must remain unsatisfied. Treating all dependents alike is unsafe.
+
+## Contributor workflow
+
+An executor unit test should include one dependent inside the skipped range, one unindexed dependent outside it, and one indexed value dependent outside it. Only the external unindexed edge should be published. The corresponding E2E source should nest the construct in a branch and a loop, then run at 1 and 16 workers to expose any instruction queued between recursive marking and dependency publication.

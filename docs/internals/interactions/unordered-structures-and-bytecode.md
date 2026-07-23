@@ -12,7 +12,11 @@ Function parameter remaps use numeric parameter index, which comes from the orde
 
 ## Where order should not matter
 
-`Scope` variable tables, resource snapshots, touched/written resource sets, and function last-use maps represent name-keyed facts. Their traversal may alter diagnostics or the order of independent serialized metadata, but it must not change graph meaning. If a format consumer begins to attach meaning to their order, introduce an explicit sort or ordered structure at that boundary.
+`Scope` variable tables, resource snapshots, touched/written resource sets, and
+function last-use maps represent name-keyed facts. Their traversal may alter
+diagnostics or the order of independent serialized metadata, but it must not
+change graph meaning. If a format consumer begins to attach meaning to their
+order, introduce an explicit sort or ordered structure at that boundary.
 
 ## Concrete failure pattern
 
@@ -31,7 +35,7 @@ link time: depRemaps[dependent Expression*] = callee completion nodes
 emit time: for dependent in actual emitted order, resolve its current index
 ```
 
-I ran:
+The following focused command validates the current implementation:
 
 ```sh
 build/Tests --gtest_filter='ExprDependent.*:linkGraph.setsCallDepRemaps:E2E/E2EFixture.E2E/FunctionsCanBeCalledInsideLoops16:E2E/E2EFixture.E2E/CallsAreSequencedCorrectly16'
@@ -41,10 +45,15 @@ Observed: all selected tests passed, including the 16-worker loop/call and call-
 
 ## Review checklist
 
-- Does any stored integer mean “the nth item” in an unordered container? Replace it with stable identity until emission.
+- Does any stored integer mean “the nth item” in an unordered container? Replace
+  it with stable identity until emission.
 - Are related index and list fields emitted from the same ordered snapshot?
 - Can inserting another dependent rehash the set between linking and serialization?
 - Are final bytecode IDs resolved only after the second numbering pass?
-- Does a test parse the bytecode and verify the remap destination, plus stress the affected runtime interaction?
+- Does a test parse the bytecode and verify the remap destination, plus stress
+  the affected runtime interaction?
 
-Byte-for-byte reproducibility is a separate goal from semantic correctness. To guarantee it, define canonical sorting for every unordered emission. Sort complete entries with their associated metadata; sorting only dependent IDs while leaving remap indices untouched corrupts the relationship.
+Byte-for-byte reproducibility is a separate goal from semantic correctness. To
+guarantee it, define canonical sorting for every unordered emission. Sort
+complete entries with their associated metadata; sorting only dependent IDs
+while leaving remap indices untouched corrupts the relationship.

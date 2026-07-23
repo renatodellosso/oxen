@@ -70,7 +70,7 @@ while (i <= 3) {
 print "total=" + total;
 ```
 
-Saving it as `loop-call.ox` and using eight workers:
+With the example saved as `loop-call.ox`, the following command uses eight workers:
 
 ```sh
 build/CLI -t loop-call.ox -h 8

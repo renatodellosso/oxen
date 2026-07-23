@@ -13,3 +13,7 @@ Invariant: skipping suppresses values and side effects, yet satisfies control/se
 In the direct run, `if (false) value = 9; else ...` left the assignment skipped and ultimately printed `branch-loop=2`. The current 16-worker tests [`SkippedIfBranchPreservesPreviousValue`](../../../tests/e2e/tests.cpp#L191), [`BranchLoopsCanRunZeroIterations`](../../../tests/e2e/tests.cpp#L206), and [`IfStatementsCanRunInsideElseBlocks`](../../../tests/e2e/tests.cpp#L638) cover skipped writes, skipped loop bodies, and nested branch propagation.
 
 Common failures are publishing indexed null arguments, only marking the outer block, or releasing a merge before the taken branch completes.
+
+## Contributor workflow
+
+A new skippable construct must define its skipped instruction range and distinguish value edges from ordering edges. The executor unit test should build an `Instruction` graph with both an indexed argument dependent and an unindexed external dependent, then verify that only the external dependent is fulfilled. The matching E2E case should place the construct inside a false branch and inside a zero-iteration loop; repeated 16-worker runs are appropriate when the change can queue work while `skipInstruction()` holds `dependencyStateMutex`.

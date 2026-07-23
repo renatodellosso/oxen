@@ -44,7 +44,7 @@ The regression source used by `compile.whileConditionDependsOnPreLoopWritesUsedB
 int i = 0; while (false) i = i + 1; print i;
 ```
 
-The test compiles and parses the bytecode, finds the initial `Set` and `While`, identifies the condition instruction through its `.arg[0]` dependent edge, and asserts that the initial set also points to that condition. I ran:
+The test compiles and parses the bytecode, finds the initial `Set` and `While`, identifies the condition instruction through its `.arg[0]` dependent edge, and asserts that the initial set also points to that condition. The following command runs the linker suite and that compiler regression:
 
 ```sh
 build/Tests --gtest_filter='linkGraph.*:compile.whileConditionDependsOnPreLoopWritesUsedByItsBody'
@@ -56,4 +56,4 @@ Observed: 26 tests ran and all passed (25 linker tests plus the compiler regress
 
 Before `linkGraph()`: every expression must have a unique provisional ID; tree ownership and traversal counts must agree; no scope-dependent summary should be trusted. After a successful link: internal and external edges are bidirectional, functions are marked `finishedLinking`, deferred functions have replacement summaries, branch resources point at their merge where required, and collected processing errors are available through `getErrors()`.
 
-Hazards include using unordered positions as identities, skipping scope-lifetime accounting when adding emitted nodes, changing loop lowering without revisiting ID ranges, and treating source-order traversal as execution order. Tests should inspect specific graph edges as well as end-to-end output.
+Hazards include using unordered positions as identities, skipping scope-lifetime accounting when adding emitted nodes, changing loop lowering without revisiting ID ranges, and treating source-order traversal as execution order. Focused tests inspect specific graph edges as well as end-to-end output. A contributor changing `processExpression()` adds or updates a graph-shape case in [`tests/compiler/graphLinker.cpp`](../../../tests/compiler/graphLinker.cpp), a serialization case in [`tests/compiler/compiler.cpp`](../../../tests/compiler/compiler.cpp) when IDs or edges change, and an E2E case when observable scheduling or output changes.

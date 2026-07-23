@@ -33,7 +33,8 @@ The compiler model is an owning tree plus non-owning graph edges. The runtime mo
 
 ## Concrete observed example
 
-I ran:
+The following command verifies the compiler graph and reconstructed runtime
+instruction example:
 
 ```sh
 build/Tests --gtest_filter='compile.compilesBasicProgram:buildInstructions.buildsSingleInstruction:linkGraph.linksInternally'
@@ -55,5 +56,14 @@ Runtime: instruction 2 has depCount=2 and receives two depArgs
 - Adding a derived expression without overriding all relevant traversal methods desynchronizes IDs and lines.
 - Copying an expression after linking copies raw/reference edges that still identify old nodes.
 - Changing `ExprDependent` equality or hashing changes deduplication and bytecode dependent order.
-- Holding `Instruction *` across vector reallocation is unsafe; construct the complete vector before resolving pointers, as `BytecodeParser` does.
+- Holding `Instruction *` across vector reallocation is unsafe; construct the
+  complete vector before resolving pointers, as `BytecodeParser` does.
 - `executed` is deliberately not equivalent to current-iteration completion; loop reset semantics use other fields.
+
+A contributor adding an expression subtype updates and tests
+`getWithSubExpressions()`, `numberExpressions()`, `countInstructions()`, and
+`toByteCode()` as one contract. A contributor adding runtime state establishes
+whether that state belongs to a reusable `Instruction`, a cloned `Subprogram`,
+or an invocation-local object such as `ReturnInvocation`. Compiler tests check
+tree order and emitted text; parser tests check pointer reconstruction; executor
+tests check lifetime and repeated/concurrent execution.

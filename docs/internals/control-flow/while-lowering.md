@@ -23,4 +23,10 @@ For `while (value < 2) value = value + 1`, `build/CLI ... -c -d` produced this r
 
 The same example prints `branch-loop=2` with 16 workers. [`buildsWhileStatements`](../../../tests/compiler/astBuilder.cpp#L371) checks the AST rewrite, and [`whileConditionDependsOnPreLoopWritesUsedByItsBody`](../../../tests/compiler/compiler.cpp#L96) checks the false-first-iteration ordering edge.
 
-Do not lower a loop without marking its body function and stable completion; generic functions and repeatable loop bodies have different runtime completion behavior.
+Do not lower a loop without marking its body function and stable completion;
+generic functions and repeatable loop bodies have different runtime completion
+behavior.
+
+## Contributor workflow
+
+A syntax or AST change affecting loops should first extend [`buildsWhileStatements`](../../../tests/compiler/astBuilder.cpp#L371) to assert the generated function flag, condition placement, body call, negative `GoTo` offset, and `completionExpression`. The compiler test should then verify incoming dependencies for a false first condition, and an E2E example should cover zero, one, and multiple iterations. Debug bytecode must retain the synthetic `Function ... true` marker because the interpreter uses that field to normalize completion signals.

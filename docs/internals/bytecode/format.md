@@ -54,7 +54,7 @@ Changing enum order changes the file format.
 
 ## Concrete observed parse
 
-I ran:
+The following command verifies the compiler and parser examples:
 
 ```sh
 build/Tests --gtest_filter='compile.compilesBasicProgram:buildInstructions.buildsSingleInstruction:buildInstructions.buildsCompoundInstructions'
@@ -64,4 +64,14 @@ Observed: all 3 passed. `buildsSingleInstruction` parsed the example above into 
 
 ## Change hazards
 
-Keep writer and reader changes atomic. New arguments need unambiguous spacing/string rules. New instructions require an appended enum value where possible, compiler emission, parser-compatible arguments, executor dispatch, and malformed-bytecode tests. If external compatibility becomes important, add a version before changing existing opcode values or argument layouts.
+Keep writer and reader changes atomic. Give new arguments unambiguous spacing
+and string rules. For a new instruction, append an enum value where possible,
+add compiler emission and executor dispatch, preserve parser-compatible
+arguments, and add malformed-bytecode tests. If external compatibility becomes
+important, add a format version before changing existing opcode values or
+argument layouts. Verify the text in
+[`tests/compiler/compiler.cpp`](../../../tests/compiler/compiler.cpp), pointer
+resolution in
+[`tests/interpreter/bytecodeParser.cpp`](../../../tests/interpreter/bytecodeParser.cpp),
+and execution in [`tests/interpreter/executor.cpp`](../../../tests/interpreter/executor.cpp)
+or the E2E suite.

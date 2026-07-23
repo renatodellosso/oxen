@@ -7,3 +7,7 @@ At runtime every recursive `Call` clones the body and gives its root block a chi
 Current evidence: the focused linker tests for recursive resource reuse and captured-write dependencies both passed. The 16-worker runs of [`RecursiveFibonacciCallsCanBeLinked`](../../../tests/e2e/tests.cpp#L620) and [`NestedRecursiveFunctionsRetainTheirLexicalScope`](../../../tests/e2e/tests.cpp#L628) passed, observing `2` and `7` respectively. [`waitsForLeadingSideEffectsBeforeRecursiveCalls`](../../../tests/interpreter/executor.cpp#L602) produced an ordered logical countdown from 12 to 0.
 
 Typical failures are redeclaring the recursive function during pass two, clearing summaries before recursive calls can consult them, or cloning the wrong enclosing scope.
+
+## Contributor workflow
+
+A recursion-linking change should preserve the first-pass entry in `deferredFunctionUsage` until every deferred body has been relinked. A linker test should cover a recursive read and write of a captured resource, and an executor test should place a visible side effect before the recursive call to verify ordering. The E2E example should combine a nested recursive function with an outer parameter of the same name as a global, proving that each invocation resolves the saved lexical scope rather than a sibling invocation's scope.

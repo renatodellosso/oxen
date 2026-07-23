@@ -7,3 +7,7 @@ Completion discovery must also look through nested call structure. [`getCompleti
 Concrete examples are [`CallsCanBeNestedAsArguments`](../../../tests/e2e/tests.cpp#L578), where `twice(increment(2))` prints `6`, and [`NestedRecursiveFunctionsRetainTheirLexicalScope`](../../../tests/e2e/tests.cpp#L628), which prints `7`. The focused completion-barrier tests pass.
 
 Failure modes include an outer call reading an uninitialized parameter, terminal discovery releasing at the nested `Call` rather than its continuation, and counting both nested and propagated completion signals.
+
+## Contributor workflow
+
+A completion change should test both `outer(inner(value))` argument nesting and a call followed by a side effect inside the outer body. The unit graph should show that `getCompletionInstructionIds()` selects the continuation after an internally connected `Call`, while `getStableCompletionInstructionIds()` replaces repeatable loop-local terminals with `While`. The E2E matrix should include nested recursion and should run at 1 and 16 workers so parameter wiring and completion propagation are both exercised.

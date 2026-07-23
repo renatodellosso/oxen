@@ -15,3 +15,7 @@ Observed output was exactly `loop-call=0`, `loop-call=1`, `loop-call=2`. Debug b
 The executor test was also part of a 20-repeat concurrency run with branched-return, side-effect-barrier, and recursive-call regressions; all 80 executions passed.
 
 Invariant: each iteration's call invocation is fully wired and its ordering-relevant terminal work completes before loop reset. A direct call result is not sufficient if the callee has later side effects.
+
+## Contributor workflow
+
+A loop/call change should validate the serialized `_body` call remaps, invocation-local completion barriers, and publication-before-`GoTo` ordering. The focused executor test should assert both ordered output and that reusable `Call` dependents remain enabled after execution. The E2E matrix should include a void call, a value-returning call, and a nested call inside the loop at 1 and 16 workers; Release-mode repetition is required before a concurrency-sensitive change is considered stable.

@@ -19,3 +19,7 @@ while (i < 3) { show(i); i = i + 1; }
 produced `loop-call=0`, `loop-call=1`, `loop-call=2` in order at 16 threads.
 
 The regression [`LoopBackWaitsForDependencyPublication`](../../../tests/e2e/tests.cpp#L352) stresses three nested loops. Failure modes include stale `depArgs`, dependency counts drifting per iteration, or `GoTo` resetting state while another worker is still publishing results.
+
+## Contributor workflow
+
+A reset change should be checked against three edge classes: an edge wholly inside the loop must replay, an edge entering from before the loop must remain fulfilled, and an edge leaving the loop must not be decremented. An executor-level test should inspect `depsFulfilled` and `depArgs` across at least two iterations. The source-level regression should include a call with a side effect before the loop-back edge and should be repeated in a Release build with 16 workers, because publication/reset races can remain hidden in Debug builds.

@@ -38,8 +38,8 @@ module details.
 
 ## Invariants and change hazards
 
-- New source behavior needs focused compiler/executor coverage and an E2E case;
-  CLI argument behavior needs a CLI test.
+- New source behavior requires focused compiler/executor coverage and an E2E
+  case; CLI argument behavior requires a CLI test.
 - Keep reusable compile/execute logic in `src`. Benchmark-only code belongs in
   `benchmark`, and the test target links benchmark sources except `main.cpp`.
 - `ExecutionStats::executedInstructions` is dynamic work. Preserve equal counts

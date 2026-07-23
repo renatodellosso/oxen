@@ -12,6 +12,12 @@ print a;
 
 Both branches are linked from the snapshot containing `a = 0`. Because either branch writes `a`, the merge becomes `a.lastWrittenBy`; the final read waits on it. The untaken block is skipped but publishes its non-value merge edges.
 
-Current evidence: `build/Tests --gtest_filter='linkGraph.linksElseBranchesFromPreBranchResourceState:E2E/E2EFixture.E2E/ElsesSetVariablesFromThenBranch16'` passed in the same build (the linker portion was included in the focused 14-test run; the E2E case is defined at [`tests/e2e/tests.cpp`](../../../tests/e2e/tests.cpp#L179)). The direct false/else example printed `branch-loop=2` with 16 workers.
+Current evidence: `build/Tests --gtest_filter='linkGraph.linksElseBranchesFromPreBranchResourceState:E2E/E2EFixture.E2E/ElsesSetVariablesFromThenBranch16'` passed both selected tests in the current build; the E2E case is defined at [`tests/e2e/tests.cpp`](../../../tests/e2e/tests.cpp#L179). The direct false/else example printed `branch-loop=2` with 16 workers.
 
-Invariant: an else access must never depend on a then write, and a post-branch access must never bypass `BranchMerge`. When adding resource-like effects, update snapshot capture, branch-use marking, and merge finalization together.
+Invariant: an else access must never depend on a then write, and a post-branch
+access must never bypass `BranchMerge`. When adding resource-like effects,
+update snapshot capture, branch-use marking, and merge finalization together.
+
+## Contributor workflow
+
+The smallest useful linker regression records the initial write, one write per branch, the merge, and the final read, then asserts every dependency explicitly. A second case should leave one branch read-only so that merge behavior is not accidentally applied to untouched resources. The E2E layer should execute both condition values with 16 workers and verify the final value rather than instruction timing.

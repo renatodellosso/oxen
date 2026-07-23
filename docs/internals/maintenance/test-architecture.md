@@ -3,8 +3,8 @@
 The test binary links production compiler/interpreter sources and all benchmark
 sources except executable entry points. `CMakeLists.txt` requests CTest
 registration with `gtest_discover_tests()`, while direct execution through
-`build/Tests` supports filters and repetition. Check registration in the build
-you are using: in the documentation audit's existing build,
+`build/Tests` supports filters and repetition. Check registration in the active
+build. In the documentation audit's existing build,
 `ctest --test-dir build -N` reported zero tests, so `build/Tests` was the
 reliable full-suite command.
 
@@ -68,6 +68,9 @@ It deliberately samples one test from each important layer. It does not replace
   elapsed time is machine-dependent.
 
 ## Running tests
+
+The following commands build the active tree, run the full suite, and select
+focused compiler and 16-worker E2E cases:
 
 ```sh
 cmake --build build

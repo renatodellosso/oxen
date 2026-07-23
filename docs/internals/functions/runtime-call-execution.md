@@ -41,3 +41,13 @@ the independent groups is intentionally unspecified.
 The focused executor run passed [`isolatesBranchedReturnsAcrossConcurrentCallInvocations`](../../../tests/interpreter/executor.cpp), which launches twelve branched calls with 16 workers, and [`waitsForCallsInsideLoopIterations`](../../../tests/interpreter/executor.cpp).
 
 Failure modes include enqueueing before argument edges exist, sharing the template body's scope, or publishing the original call's dependents in addition to remapped edges.
+
+## Change workflow
+
+A contributor changing the `Call` branch should inspect its serialized layout
+in `UnaryCallExpression::toByteCode()` and keep the parser cursor returned by
+each `parse*` helper aligned with the next field. Tests should cover direct
+return values, captured-resource side effects, calls inside loops, and two or
+more concurrent invocations with different arguments. Release-mode repetition
+of the focused executor tests is required for wiring changes because a single
+successful schedule does not establish invocation isolation.

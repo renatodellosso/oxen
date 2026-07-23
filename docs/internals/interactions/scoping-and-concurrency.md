@@ -84,3 +84,13 @@ order is free because these reads do not mutate the variables. Block-scope and
 lookup coverage is in [`tests/scope.cpp`](../../../tests/scope.cpp), and
 [`FunctionParametersShadowVariablesWhenCalled`](../../../tests/e2e/tests.cpp)
 guards compiler/runtime agreement.
+
+## Contributor workflow
+
+A scope change should be checked at both representations: the compiler must bind
+the intended `Resource`, and the executor must mutate the corresponding `Value`.
+The unit suite should cover local lookup, enclosing lookup, shadowing, and
+concurrent insertion/lookup if the locking contract changes. The E2E case should
+call the same function concurrently with distinct parameter values and include a
+nested function that captures an outer parameter; exact value multiplicities
+demonstrate invocation isolation even when independent print order is unspecified.

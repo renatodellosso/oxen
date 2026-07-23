@@ -36,7 +36,8 @@ var = 1;
 
 the declaration is the first write. The standalone read depends on it. Before the final `Set` is processed, its `ReferenceIdentifier` target is also registered as a read. The `Set` waits for the declaration and both reads (with its duplicate unindexed target edge removed), then becomes `lastWrittenBy` and the only entry in the new `currAccesses` set.
 
-I ran:
+The following focused command verifies the default resources, read/write
+ordering, and redirected print completion:
 
 ```sh
 build/Tests --gtest_filter='constructor.createsDefaultResources:linkGraph.createsResources:linkGraph.readsResources:linkGraph.writesResources:linkGraph.writesWaitForPriorPrintSideEffects'
@@ -46,9 +47,19 @@ Observed: all 5 passed. The tests inspect exact expression addresses in both edg
 
 ## Invariants and hazards
 
-- Every resource edge must be added in both directions through `addDependency()`.
+- Every resource edge is added in both directions through `addDependency()`.
 - A write must wait for all accesses since the prior write, not only the last read.
 - A branch must begin from the pre-branch snapshot and join at the merge.
 - Resource identity is lexical: compare the `shared_ptr<Resource>` returned by scopes when deciding whether a use belongs to a function or a shadow.
-- Calls require a resource name for ordinary remapping; only loop `GoTo` handling intentionally remaps across all callee last uses.
-- Adding a side-effecting consumer requires deciding whether read completion should redirect through it.
+- Calls require a resource name for ordinary remapping; only loop `GoTo`
+  handling intentionally remaps across all callee last uses.
+- A side-effecting consumer change explicitly determines whether read
+  completion redirects through it.
+
+A contributor extending resource analysis first identifies whether the new
+expression reads, writes, or terminally consumes a lexical resource. The
+implementation then updates `GraphLinker::processExpression()` and, when
+needed, `Expression::redirectResourceCompletionsTo()`. Tests in
+[`tests/compiler/graphLinker.cpp`](../../../tests/compiler/graphLinker.cpp)
+verify both `dependencies` and reverse `dependents`; a concurrent E2E or
+executor regression is also required when the edge controls side-effect order.

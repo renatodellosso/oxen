@@ -24,3 +24,13 @@ print outer(7);
 [`NestedRecursiveFunctionsRetainTheirLexicalScope`](../../../tests/e2e/tests.cpp) observed `7`. Parameter shadowing is covered by [`FunctionParametersShadowVariablesWhenCalled`](../../../tests/e2e/tests.cpp).
 
 The key invariant is that declaration-time lexical visibility is preserved, while every invocation receives fresh parameter storage. Capturing the caller's current dynamic scope or sharing parameter scopes causes cross-call contamination.
+
+## Change workflow
+
+A contributor extending captures must update both phases: `GraphLinker` must
+record the captured resource in the function summaries, and the executor must
+retain the corresponding enclosing `Scope<Value>` when cloning the call body.
+The compiler tests should assert the exact `firstUses` or `lastUses` entry, and
+an E2E test should call the same declaration concurrently with different
+arguments. `NestedRecursiveFunctionsRetainTheirLexicalScope` is the concrete
+model for a recursive capture regression.

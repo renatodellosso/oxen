@@ -11,3 +11,7 @@ Invariant: each branch begins from the same incoming resource state; the merge b
 [`linksElseBranchesFromPreBranchResourceState`](../../../tests/compiler/graphLinker.cpp#L429) constructs `a = 0; if (...) a = 1; else a = 2; print a;`. The focused run passed and asserts that the else reference depends on the initial set, not the then set; the merge depends on the initial set; and the later read depends on the merge.
 
 The direct 16-thread CLI example likewise observed `branch-loop=2` after taking the else path. If snapshot restoration is removed, impossible cross-branch edges can deadlock or make an untaken write appear to precede the taken branch.
+
+## Contributor workflow
+
+A change to branch-visible resource state should update the three phases together: `registerIfExpression()` captures the incoming state, `enterElseBranch()` restores it, and `finalizeBranchMerge()` installs the outgoing state. The focused linker test should assert the exact dependency IDs for both branch reads and the post-merge read; an E2E case should then run the same source with 1 and 16 workers. A useful extension is a nested branch in which only the inner `else` writes a captured variable, because that case verifies that `markBranchResourceUse()` propagates the expression-ID range to the enclosing branch context.

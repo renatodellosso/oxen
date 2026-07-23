@@ -27,7 +27,8 @@ It marks the function `generatedLoopBody` and sets the outer block's `completion
 
 ## Concrete observed examples
 
-I ran:
+The following focused verification command exercises the parser and the
+language-visible grouping behavior:
 
 ```sh
 build/Tests --gtest_filter='AstBuilder.*:E2E/E2EFixture.E2E/MixedArithmeticOperatorsAreGroupedFromTheRight1:E2E/E2EFixture.E2E/DivisionChainsAreGroupedFromTheRight1'
@@ -40,5 +41,15 @@ Observed: all 26 AST tests and both E2E cases passed. The E2E outputs were `14` 
 - End tokens are owned by the surrounding parse method; consuming one too early shifts the cursor.
 - Auto-ending control-flow/function expressions must not be extended as binary operands accidentally.
 - Every synthetic node introduced in post-processing needs correct line data, traversal/count behavior, and `postprocessed` handling.
-- Changing precedence is a language-visible and graph-shape change; update AST, compiler-bytecode, and E2E expectations together.
-- A function declaration is incomplete until post-processing attaches its body; do not run numbering/linking before `build()` finishes.
+- Changing precedence is both language-visible and graph-shaping; update AST,
+  compiler-bytecode, and E2E expectations together.
+- A function declaration is incomplete until post-processing attaches its
+  body; do not run numbering or linking before `build()` finishes.
+
+For a new leading or compound form, the contributor adds its `TokenType`
+handling, constructs an owning expression in `AstBuilder`, includes that node
+in the four traversal/serialization methods described in
+[the expression model](../architecture/expression-instruction-models.md), and
+adds focused cases to [`tests/compiler/astBuilder.cpp`](../../../tests/compiler/astBuilder.cpp).
+Any emitted form also needs compiler-bytecode and E2E coverage so that cursor
+movement, ownership, graph shape, and runtime behavior remain aligned.

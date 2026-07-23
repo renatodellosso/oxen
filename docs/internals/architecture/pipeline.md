@@ -37,7 +37,7 @@ The compiler test `compile.compilesBasicProgram` sends `1 + 1` through `compile(
 2  6
 ```
 
-The first two instructions publish values to dependency slots 0 and 1 of instruction 2; instruction 2 waits for both. I ran:
+The first two instructions publish values to dependency slots 0 and 1 of instruction 2; instruction 2 waits for both. The following command exercises every compiler boundary shown in the phase map:
 
 ```sh
 build/Tests --gtest_filter='Tokenizer.*:compile.*:AstBuilder.*:linkGraph.*:buildInstructions.*'
@@ -49,4 +49,10 @@ Observed: 86 tests ran and all 86 passed, including
 
 ## Change hazards
 
-When adding a syntax form, check every boundary rather than only the parser: token classification, AST ownership, recursive traversal, provisional numbering, linking, final numbering, bytecode arguments, parser interpretation, executor dispatch, and focused plus end-to-end tests. In particular, never use a provisional ID as permanent identity and never insert emitted instructions without updating `getWithSubExpressions()`, `numberExpressions()`, `countInstructions()`, and `toByteCode()` consistently.
+When adding a syntax form, check every boundary: token
+classification, AST ownership, recursive traversal, provisional numbering,
+linking, final numbering, bytecode arguments, parser interpretation, executor
+dispatch, and focused plus end-to-end tests. Never use provisional IDs as
+permanent identity. Never insert emitted instructions without updating
+`getWithSubExpressions()`, `numberExpressions()`, `countInstructions()`, and
+`toByteCode()` consistently.
