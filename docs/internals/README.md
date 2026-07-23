@@ -1,4 +1,4 @@
-# Parallel internals
+# Oxen internals
 
 These documents describe the implementation contracts that must be preserved
 when changing the compiler, bytecode, dependency graph, or concurrent runtime.
