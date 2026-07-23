@@ -1,7 +1,7 @@
 # C++ and software-engineering hardening roadmap
 
 This document records the highest-value practices and technical improvements
-for making Parallel's C++ code safer, easier to review, and easier to extend.
+for making Oxen's C++ code safer, easier to review, and easier to extend.
 It is a prioritized roadmap, not a request to rewrite the project at once.
 
 The project already has important strengths: C++20, cross-platform CI, focused
