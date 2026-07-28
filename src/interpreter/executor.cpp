@@ -185,7 +185,7 @@ void Executor::enqueueIfReady(Instruction &instr) {
   if (!instr.queued && !instr.skipped &&
       instr.depsFulfilled == instr.depCount) {
     instr.queued = true;
-    pendingTasks.fetch_add(1);
+    pendingInstructions.fetch_add(1);
     queue.push(instr);
   }
 }
@@ -655,8 +655,7 @@ void Executor::execSingleInstruction(Instruction &instr,
         auto dep = loopDependency.dependents[depIndex];
         if (dep.instr->program != instr.program || dep.instr->id <= returnTo ||
             dep.instr->id > instr.id ||
-            (dep.disabled &&
-             loopDependency.type != InstructionType::Call &&
+            (dep.disabled && loopDependency.type != InstructionType::Call &&
              dep.instr != &instr)) {
 
           std::string reason = dep.instr->program != instr.program
@@ -676,8 +675,7 @@ void Executor::execSingleInstruction(Instruction &instr,
 
         std::lock_guard<std::mutex> fulfilledLock(
             depsFulfilledMutexes[dep.instr->id]);
-        dep.instr->depsFulfilled =
-            std::max(dep.instr->depsFulfilled - 1, 0);
+        dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
 
         if (dep.instr == &instr && cliArgs.verbose) {
           log(LOCATION, "\tDecremented depsFulfilled from {} to {}",
@@ -757,8 +755,7 @@ void Executor::execSingleInstruction(Instruction &instr,
       remappedDependencies.emplace_back(remappedDependent, remap.second);
 
       if (cliArgs.verbose)
-        log(LOCATION,
-            "Call invocation {} handles {} through dependency remaps",
+        log(LOCATION, "Call invocation {} handles {} through dependency remaps",
             callInvocationId, dependent.instr->toString());
     }
 
@@ -856,37 +853,35 @@ void Executor::execSingleInstruction(Instruction &instr,
     auto completionIds = getStableCompletionInstructionIds(
         body, getCompletionInstructionIds(body));
 
-    auto attachCompletionBarrier =
-        [&](InstrDependent dependent,
-            const std::unordered_set<int> &signalInstructionIds) {
-          if (signalInstructionIds.empty()) {
-            updateDependency(dependent, result);
-            return;
-          }
+    auto attachCompletionBarrier = [&](InstrDependent dependent,
+                                       const std::unordered_set<int>
+                                           &signalInstructionIds) {
+      if (signalInstructionIds.empty()) {
+        updateDependency(dependent, result);
+        return;
+      }
 
-          auto completion = std::make_shared<CallCompletion>(
-              callInvocationId,
-              static_cast<int>(signalInstructionIds.size()), dependent);
-          for (auto signalInstructionId : signalInstructionIds) {
-            auto completionSignal = InstrDependent(dependent.instr);
-            completionSignal.callCompletion = completion;
-            body->at(signalInstructionId)
-                .dependents.push_back(completionSignal);
-          }
+      auto completion = std::make_shared<CallCompletion>(
+          callInvocationId, static_cast<int>(signalInstructionIds.size()),
+          dependent);
+      for (auto signalInstructionId : signalInstructionIds) {
+        auto completionSignal = InstrDependent(dependent.instr);
+        completionSignal.callCompletion = completion;
+        body->at(signalInstructionId).dependents.push_back(completionSignal);
+      }
 
-          if (cliArgs.verbose)
-            log(LOCATION,
-                "Call invocation {} waits for {} resource/terminal signals "
-                "before releasing {}",
-                callInvocationId, signalInstructionIds.size(),
-                dependent.instr->toString());
-        };
+      if (cliArgs.verbose)
+        log(LOCATION,
+            "Call invocation {} waits for {} resource/terminal signals "
+            "before releasing {}",
+            callInvocationId, signalInstructionIds.size(),
+            dependent.instr->toString());
+    };
 
     for (auto &[dependent, dependencyIds] : remappedDependencies) {
       dependencyIds.insert(dependencyIds.end(), completionIds.begin(),
                            completionIds.end());
-      auto barrierIds =
-          getStableCompletionInstructionIds(body, dependencyIds);
+      auto barrierIds = getStableCompletionInstructionIds(body, dependencyIds);
       attachCompletionBarrier(dependent, barrierIds);
     }
 
@@ -991,11 +986,10 @@ void Executor::execWorker(int id) {
     {
       std::lock_guard<std::recursive_mutex> dependencyStateLock(
           dependencyStateMutex);
-      std::lock_guard<std::mutex> fulfilledLock(
-          depsFulfilledMutexes[instr.id]);
+      std::lock_guard<std::mutex> fulfilledLock(depsFulfilledMutexes[instr.id]);
       instr.queued = false;
       if (instr.skipped || instr.depsFulfilled != instr.depCount) {
-        pendingTasks.fetch_sub(1);
+        pendingInstructions.fetch_sub(1);
         continue;
       }
     }
@@ -1009,7 +1003,7 @@ void Executor::execWorker(int id) {
       failed = true;
       halt = true;
     }
-    pendingTasks.fetch_sub(1);
+    pendingInstructions.fetch_sub(1);
   }
 
   if (stats)
@@ -1020,7 +1014,7 @@ void Executor::supervisor() {
   if (cliArgs.verbose)
     log(LOCATION, "Supervisor awake");
 
-  while (pendingTasks.load() > 0 && !halt)
+  while (pendingInstructions.load() > 0 && !halt)
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   if (!halt)
@@ -1094,9 +1088,8 @@ void Executor::startExecution() {
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
                    ExecutionStats *stats)
     : cliArgs(cliArgs), program(program), stats(stats),
-      executedInstructionsByWorker(cliArgs.threads, 0),
-      pendingTasks(0), nextCallInvocationId(0),
+      executedInstructionsByWorker(cliArgs.threads, 0), pendingInstructions(0),
+      nextCallInvocationId(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
-      halt(false), failed(false), haltCause("Unknown") {
-}
+      halt(false), failed(false), haltCause("Unknown") {}

@@ -24,7 +24,9 @@ class Executor {
   ConcurrentQueue<std::reference_wrapper<Instruction>> queue;
   std::vector<std::thread> workers;
   std::vector<std::uint64_t> executedInstructionsByWorker;
-  std::atomic_int pendingTasks;
+  // Instructions currently being executed or waiting on the queue
+  std::atomic_int pendingInstructions;
+  // Used to track monotonically increasing IDs for each function call
   std::atomic_uint64_t nextCallInvocationId;
 
   // We have to put the mutexes in here since we can't move them
