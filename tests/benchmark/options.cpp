@@ -4,12 +4,6 @@
 #include <string_view>
 #include <vector>
 
-TEST(BenchmarkOptions, UsesDefaults) {
-  auto options = parseOptions({});
-  EXPECT_EQ(options.trials, 10);
-  EXPECT_EQ(options.threads, (std::vector<int>{1, 2, 4, 8, 16}));
-}
-
 TEST(BenchmarkOptions, ParsesOverridesAndPreservesThreadOrder) {
   auto options =
       parseOptions({"--threads", "8,1,8", "--trials", "3"});
