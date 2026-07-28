@@ -16,7 +16,7 @@ struct Program {
 
 struct Options {
   int trials = 10;
-  std::vector<int> threads = {1, 2, 4, 8, 16};
+  std::vector<int> threads = {1, 2, 4, 8, 16, 32};
 };
 
 struct TrialResult {
