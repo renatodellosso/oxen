@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 
+#define THREADS_PER_QUEUE 2
+
 struct ExecutionStats {
   std::uint64_t executedInstructions;
 
@@ -21,7 +23,7 @@ class Executor {
   const CliArgs &cliArgs;
   Subprogram &program;
   ExecutionStats *stats;
-  ConcurrentQueue<std::reference_wrapper<Instruction>> queue;
+  std::vector<ConcurrentQueue<std::reference_wrapper<Instruction>>> queues;
   std::vector<std::thread> workers;
   std::vector<std::uint64_t> executedInstructionsByWorker;
   // Instructions currently being executed or waiting on the queue
@@ -44,6 +46,8 @@ class Executor {
   std::atomic_bool failed;
   std::string haltCause;
 
+  int getQueueId(int worker, int offset) const;
+
   // Increment depsFulfilled and, if relevant, sets depArgs[i]
   void updateDependency(InstrDependent dep, std::shared_ptr<Value> result);
   void enqueueIfReady(Instruction &instr);
@@ -58,7 +62,7 @@ class Executor {
   void supervisor();
 
   // Reads instructions and pushes everything that's ready onto the queue
-  void initQueue();
+  void initQueues();
   void initScopes();
 
 public:

@@ -14,6 +14,7 @@
 #include <optional>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <variant>
@@ -177,6 +178,10 @@ invalidArgTypesError(Instruction &instr, ValueType left, ValueType right) {
                   (int)left, (int)right));
 }
 
+int Executor::getQueueId(int worker, int offset) const {
+  return (worker + offset) % queues.size();
+}
+
 void Executor::enqueueIfReady(Instruction &instr) {
   std::lock_guard<std::recursive_mutex> dependencyStateLock(
       dependencyStateMutex);
@@ -186,7 +191,7 @@ void Executor::enqueueIfReady(Instruction &instr) {
       instr.depsFulfilled == instr.depCount) {
     instr.queued = true;
     pendingInstructions.fetch_add(1);
-    queue.push(instr);
+    queues[instr.id % queues.size()].push(instr);
   }
 }
 
@@ -931,6 +936,9 @@ void Executor::execSingleInstruction(Instruction &instr,
     break;
   }
   case InstructionType::Return: {
+    // Avoid segfaulting on empty depArgs
+    if (instr.depArgs.empty())
+      break;
     result = instr.depArgs[0];
     break;
   }
@@ -973,7 +981,16 @@ void Executor::execWorker(int id) {
     log(location.c_str(), "Worker {} awake", id);
 
   while (!halt) {
-    auto popped = queue.pop();
+    std::invoke_result_t<
+        decltype(&ConcurrentQueue<std::reference_wrapper<Instruction>>::pop),
+        ConcurrentQueue<std::reference_wrapper<Instruction>>>
+        popped = nullptr;
+
+    for (int i = 0; i < queues.size(); i++) {
+      popped = queues[getQueueId(id, i)].pop();
+      if (!std::holds_alternative<nullptr_t>(popped))
+        break;
+    }
 
     // Check popped holds a nullptr_t
     if (std::holds_alternative<nullptr_t>(popped)) {
@@ -1037,14 +1054,18 @@ void Executor::supervisor() {
                         executedInstructionsByWorker.end(), std::uint64_t{0});
 }
 
-void Executor::initQueue() {
+void Executor::initQueues() {
+  // Create queues
+  int queueCount = cliArgs.threads / THREADS_PER_QUEUE;
+
   for (int i = 0; i < program.size(); i++) {
     auto &instr = program[i];
     enqueueIfReady(instr);
   }
 
   if (cliArgs.verbose)
-    log(LOCATION, "Pushed {} instructions onto the queue.", queue.size());
+    log(LOCATION, "Pushed {} instructions onto the queue.",
+        pendingInstructions.load());
 }
 
 void Executor::initScopes() {
@@ -1066,7 +1087,7 @@ void Executor::initScopes() {
 
 void Executor::startExecution() {
   initScopes();
-  initQueue();
+  initQueues();
 
   if (cliArgs.verbose)
     log(LOCATION, "Starting {} execution workers...", cliArgs.threads);
@@ -1088,6 +1109,10 @@ void Executor::startExecution() {
 Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
                    ExecutionStats *stats)
     : cliArgs(cliArgs), program(program), stats(stats),
+      // Construct the queues here, since we can't init vectors later if they
+      // contains mutexes. Also use ceiling division to ensure 1 threads
+      // produces >1 queue
+      queues((cliArgs.threads + THREADS_PER_QUEUE - 1) / THREADS_PER_QUEUE),
       executedInstructionsByWorker(cliArgs.threads, 0), pendingInstructions(0),
       nextCallInvocationId(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
