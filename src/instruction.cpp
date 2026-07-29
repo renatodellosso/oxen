@@ -90,7 +90,8 @@ Instruction::Instruction(int id, std::shared_ptr<Scope<Value>> scope)
       scope(scope) {}
 
 std::string Instruction::toString() {
-  auto depCountStr = std::format("{}/{}", depsFulfilled, depCount);
+  auto depCountStr =
+      std::format("{}/{}", depsFulfilled.load(), depCount.load());
   if (depsFulfilled == depCount)
     depCountStr = colorize(depCountStr, Color::Green);
   else
@@ -133,3 +134,42 @@ std::string Instruction::toString() {
 
   return str + ")";
 }
+
+#define INSTR_CONSTRUCTOR : id(other.id), type(other.type), bytecodeArgs(other.bytecodeArgs), \
+    depArgs(other.depArgs), depCount(other.depCount.load()), \
+    depsFulfilled(other.depsFulfilled.load()), dependents(other.dependents), \
+    scope(other.scope), skipped(other.skipped), queued(other.queued), \
+     executed(other.executed), program(other.program) \
+    {}
+
+#define INSTR_ASSIGN_CONSTRUCTOR                                               \
+  {                                                                            \
+    if (&other == this)                                                        \
+      return *this;                                                            \
+                                                                               \
+    id = other.id;                                                             \
+    type = other.type;                                                         \
+    bytecodeArgs = other.bytecodeArgs;                                         \
+    depArgs = other.depArgs;                                                   \
+    depCount = other.depCount.load();                                          \
+    depsFulfilled = other.depsFulfilled.load();                                \
+    dependents = other.dependents;                                             \
+    scope = other.scope;                                                       \
+    skipped = other.skipped;                                                   \
+    queued = other.queued;                                                     \
+    executed = other.executed;                                                 \
+    program = other.program;                                                   \
+                                                                               \
+    return *this;                                                              \
+  }
+
+Instruction::Instruction(const Instruction &other) INSTR_CONSTRUCTOR
+
+    Instruction &Instruction::operator=(const Instruction &other)
+        INSTR_ASSIGN_CONSTRUCTOR
+
+    // Not sure why it indents this
+    Instruction::Instruction(Instruction &&other) noexcept INSTR_CONSTRUCTOR
+
+    Instruction &Instruction::operator=(Instruction &&other) noexcept
+    INSTR_ASSIGN_CONSTRUCTOR

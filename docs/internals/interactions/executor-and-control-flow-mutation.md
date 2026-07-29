@@ -25,10 +25,12 @@ does not publish its exit dependents. When false, it skips the body and publishe
 the stable loop-completion signal.
 
 At `GoTo`, the executor holds `dependencyStateMutex`, identifies the backward
-range, clears each instruction's `depArgs` under its per-ID mutex, and decrements
-fulfilled counts for edges that will be replayed. It then requeues instructions
-already ready for the next iteration. External, before-loop, after-loop, and
-most disabled edges are excluded from reset.
+range, and resets state for edges that will be replayed. The reset protocol
+requires clearing each instruction's `depArgs` under that instruction's own
+mutex and decrementing its atomic fulfilled count while the outer state mutex
+is held. It then requeues instructions already ready for the next iteration.
+External, before-loop, after-loop, and most disabled edges are excluded from
+reset.
 
 `execSingleInstruction()` publishes ordinary dependents first and edges that
 eventually release a `GoTo` last. `releasesGoTo()` follows nested
@@ -38,13 +40,16 @@ by a function call.
 ## Locking model and hazards
 
 - `dependencyStateMutex` must cover both graph-wide reset and dependency
-  publication. Narrowing it reintroduces reset/publication races.
+  publication, including compound comparisons of the atomic dependency counts.
+  Narrowing it reintroduces reset/publication races.
 - The mutex is recursive because a branch skip can recurse and call
   `updateDependency()`.
-- `depArgsMutexes` and `depsFulfilledMutexes` are indexed by instruction ID.
-  Cloned call bodies reuse local IDs, so unrelated invocations share lock slots:
-  this is safe serialization but can create contention. IDs must remain within
-  the root program's allocated mutex-vector range.
+- Every `Instruction` owns its `depArgsMutex`; argument-vector mutation must
+  lock the destination instruction rather than select a lock by ID. Cloned call
+  bodies therefore receive independent locks even though they reuse local IDs.
+- `depCount` and `depsFulfilled` are atomic because `Instruction` instances are
+  shared across workers. Their copy and move operations snapshot the counts;
+  they do not transfer an instruction's mutex.
 - Never enqueue `GoTo` until all sibling dependents from the completing
   instruction have been published.
 - Reset must clear argument slots as well as counts; stale values can make a

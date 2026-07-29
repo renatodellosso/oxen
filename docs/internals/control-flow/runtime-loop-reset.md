@@ -2,7 +2,16 @@
 
 `GoTo` does not move a program counter. In the dependency executor, [`Executor::execSingleInstruction`](../../../src/interpreter/executor.cpp#L627) resets the dependency state for every instruction from the backward target through the `GoTo` and then re-enqueues instructions that are ready.
 
-Under `dependencyStateMutex`, it clears each instruction's `depArgs`, walks in-loop dependent edges, and decrements their `depsFulfilled`. It ignores edges outside the cloned `Subprogram`, outside the loop range, and most disabled edges. A disabled `Call` edge is intentionally considered because call remapping is reconstructed per invocation. `executed` is not reset; it records whether an instruction has ever run, while `queued`, dependency counts, and arguments govern another iteration.
+Under `dependencyStateMutex`, the reset protocol clears each instruction's
+`depArgs` while holding that instruction's `depArgsMutex`, walks in-loop
+dependent edges, and decrements their atomic `depsFulfilled` counters. The
+outer mutex is still required to make those operations atomic as a group with
+respect to dependency publication and queue-state changes. Reset ignores edges
+outside the cloned `Subprogram`, outside the loop range, and most disabled
+edges. A disabled `Call` edge is intentionally considered because call
+remapping is reconstructed per invocation. `executed` is not reset; it records
+whether an instruction has ever run, while `queued`, dependency counts, and
+arguments govern another iteration.
 
 The `While` case only publishes to its immediately following body block while true and suppresses other dependents. When false it skips the body and publishes the one stable post-loop signal. At the end of every instruction, dependents that transitively release a `GoTo` are published last (`releasesGoTo`), ensuring all other outputs are visible before reset begins.
 

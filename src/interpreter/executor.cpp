@@ -186,7 +186,7 @@ int Executor::getNetPendingInstructions() const {
   int count = 0;
 
   for (const auto &pending : pendingInstructions)
-    count += pending.load();
+    count += pending;
 
   return count;
 }
@@ -194,12 +194,11 @@ int Executor::getNetPendingInstructions() const {
 void Executor::enqueueIfReady(Instruction &instr) {
   std::lock_guard<std::recursive_mutex> dependencyStateLock(
       dependencyStateMutex);
-  std::lock_guard<std::mutex> fulfilledLock(depsFulfilledMutexes[instr.id]);
 
   if (!instr.queued && !instr.skipped &&
       instr.depsFulfilled == instr.depCount) {
     instr.queued = true;
-    pendingInstructions[instr.id % pendingInstructions.size()].fetch_add(1);
+    pendingInstructions[instr.id % pendingInstructions.size()] += 1;
     queues[instr.id % queues.size()].push(instr);
   }
 }
@@ -262,7 +261,7 @@ void Executor::updateDependency(InstrDependent dep,
   }
 
   if (dep.argIndex.has_value()) {
-    std::lock_guard<std::mutex> argLock(depArgsMutexes[dep.instr->id]);
+    std::lock_guard<std::mutex> argLock(dep.instr->depArgsMutex);
 
     auto &depVec = dep.instr->depArgs;
     int i = dep.argIndex.value();
@@ -277,14 +276,8 @@ void Executor::updateDependency(InstrDependent dep,
   // Update fulfilled after setting args so other threads don't trigger
   bool ready;
 
-  // Smaller scope so the lock guard is cleaned up
-  {
-    std::lock_guard<std::mutex> fulfilledLock(
-        depsFulfilledMutexes[dep.instr->id]);
-
-    dep.instr->depsFulfilled++;
-    ready = dep.instr->depsFulfilled == dep.instr->depCount;
-  }
+  dep.instr->depsFulfilled += 1;
+  ready = dep.instr->depsFulfilled == dep.instr->depCount;
 
   if (cliArgs.verbose)
     log(LOCATION, "\tUpdated dependency for {} with result {}",
@@ -650,10 +643,10 @@ void Executor::execSingleInstruction(Instruction &instr,
     int returnTo = instr.id + dist;
 
     for (int i = returnTo; i <= instr.id; i++) {
-      // Remember to use lock when clearing depArgs, since other threads may be
-      // reading them!
+      // Remember to use lock when clearing depArgs, since other threads may
+      // be reading them!
       {
-        std::lock_guard<std::mutex> argLock(depArgsMutexes[i]);
+        std::lock_guard<std::mutex> argLock(instr.depArgsMutex);
         instr.program->at(i).depArgs.clear();
       }
 
@@ -687,13 +680,11 @@ void Executor::execSingleInstruction(Instruction &instr,
           continue;
         }
 
-        std::lock_guard<std::mutex> fulfilledLock(
-            depsFulfilledMutexes[dep.instr->id]);
         dep.instr->depsFulfilled = std::max(dep.instr->depsFulfilled - 1, 0);
 
         if (dep.instr == &instr && cliArgs.verbose) {
           log(LOCATION, "\tDecremented depsFulfilled from {} to {}",
-              instr.program->at(i).toString(), dep.instr->depsFulfilled);
+              instr.program->at(i).toString(), dep.instr->depsFulfilled.load());
         }
       }
     }
@@ -740,7 +731,7 @@ void Executor::execSingleInstruction(Instruction &instr,
 
     auto func = std::get<std::shared_ptr<Function>>(instr.depArgs[0]->val);
     auto body = func->getBody().clone();
-    auto callInvocationId = nextCallInvocationId.fetch_add(1);
+    auto callInvocationId = nextCallInvocationId += 1;
 
     if (cliArgs.verbose) {
       log(LOCATION,
@@ -787,11 +778,7 @@ void Executor::execSingleInstruction(Instruction &instr,
       // Gate the cloned body on every argument value to ensure conditional
       // paths cannot read invocation parameters before they are initialized.
       arg.dependents.emplace_back(&block);
-      {
-        std::lock_guard<std::mutex> fulfilledLock(
-            depsFulfilledMutexes[block.id]);
-        block.depCount++;
-      }
+      block.depCount++;
 
       if (cliArgs.verbose)
         log(LOCATION, "Call invocation {} gates its body on argument {}",
@@ -799,12 +786,8 @@ void Executor::execSingleInstruction(Instruction &instr,
 
       for (auto dependentIndex : remap.second) {
         arg.dependents.emplace_back(&body->at(dependentIndex));
-        {
-          std::lock_guard<std::mutex> fulfilledLock(
-              depsFulfilledMutexes[body->at(dependentIndex).id]);
-          body->at(dependentIndex)
-              .depCount++; // Be sure to adjust depCount accordingly!
-        }
+        body->at(dependentIndex)
+            .depCount++; // Be sure to adjust depCount accordingly!
 
         if (cliArgs.verbose)
           log(LOCATION, "Made {} depend on {}",
@@ -857,11 +840,7 @@ void Executor::execSingleInstruction(Instruction &instr,
       auto &nextReturn = body->at(returnIds[i]);
 
       prevReturn.dependents.emplace_back(&nextReturn);
-      {
-        std::lock_guard<std::mutex> fulfilledLock(
-            depsFulfilledMutexes[nextReturn.id]);
-        nextReturn.depCount++;
-      }
+      nextReturn.depCount++;
     }
 
     auto completionIds = getStableCompletionInstructionIds(
@@ -930,11 +909,7 @@ void Executor::execSingleInstruction(Instruction &instr,
         continue;
       }
 
-      {
-        std::lock_guard<std::mutex> fulfilledLock(
-            depsFulfilledMutexes[dep.instr->id]);
-        dep.instr->depCount += completionIds.size() - 1;
-      }
+      dep.instr->depCount += completionIds.size() - 1;
       for (auto completionId : completionIds)
         body->at(completionId).dependents.push_back(dep);
     }
@@ -1012,10 +987,9 @@ void Executor::execWorker(int id) {
     {
       std::lock_guard<std::recursive_mutex> dependencyStateLock(
           dependencyStateMutex);
-      std::lock_guard<std::mutex> fulfilledLock(depsFulfilledMutexes[instr.id]);
       instr.queued = false;
       if (instr.skipped || instr.depsFulfilled != instr.depCount) {
-        pendingInstructions[id].fetch_sub(1);
+        pendingInstructions[id] -= 1;
         continue;
       }
     }
@@ -1029,7 +1003,7 @@ void Executor::execWorker(int id) {
       failed = true;
       halt = true;
     }
-    pendingInstructions[id].fetch_sub(1);
+    pendingInstructions[id] -= 1;
   }
 
   if (stats)
@@ -1124,6 +1098,4 @@ Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
       queues((cliArgs.threads + THREADS_PER_QUEUE - 1) / THREADS_PER_QUEUE),
       executedInstructionsByWorker(cliArgs.threads, 0),
       pendingInstructions(cliArgs.threads), nextCallInvocationId(0),
-      depArgsMutexes(std::vector<std::mutex>(program.size())),
-      depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
       halt(false), failed(false), haltCause("Unknown") {}

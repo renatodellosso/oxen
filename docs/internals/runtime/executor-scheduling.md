@@ -16,14 +16,15 @@ instructions can run in parallel.
 
 The readiness state is:
 
-- `depCount`: required signals, fixed by parsing and later adjusted by call
-  remapping.
-- `depsFulfilled`: signals received for the current execution/loop iteration.
+- `depCount`: atomic required-signal count, fixed by parsing and later adjusted
+  by call remapping.
+- `depsFulfilled`: atomic signals-received count for the current execution or
+  loop iteration.
 - `depArgs[argIndex]`: value-carrying signals. A dependency without an argument
   index is ordering-only.
 - `queued`: prevents duplicate queue entries; `skipped`: suppresses execution.
-- `pendingTasks`: number of queued or executing tasks. `supervisor()` stops when
-  this reaches zero.
+- `pendingInstructions`: per-worker atomic counts of queued or executing work.
+  `supervisor()` stops when their sum reaches zero.
 
 `updateDependency()` stores an argument before incrementing `depsFulfilled`.
 When the count reaches `depCount`, it calls `enqueueIfReady()`. A worker clears
@@ -31,27 +32,36 @@ When the count reaches `depCount`, it calls `enqueueIfReady()`. A worker clears
 `execSingleInstruction()`. This second check is necessary because loop reset or
 branch skipping may change state after an item enters the queue.
 
-`depArgsMutexes[id]` protects an instruction's argument vector, while
-`depsFulfilledMutexes[id]` protects its count and queue transition.
-`dependencyStateMutex` serializes those local operations with whole-loop reset.
-It is recursive because `skipInstruction()` recursively publishes ordering
-dependencies. `pendingTasks` and termination flags are atomic.
+Each `Instruction` owns a `depArgsMutex` that protects writes, resizing, and
+clearing of its argument vector. Keeping the mutex beside the vector also gives
+each cloned call body independent argument locking even though cloned
+instructions reuse local IDs. `depCount` and `depsFulfilled` are atomic, but
+the atomics do not by themselves make a multi-field readiness transition
+atomic: `dependencyStateMutex` still serializes dependency publication,
+`queued`/`skipped` changes, readiness checks, and whole-loop reset. It is
+recursive because `skipInstruction()` recursively publishes ordering
+dependencies. `pendingInstructions`, the invocation-ID counter, and termination
+flags are atomic.
 
 ## Invariants and change hazards
 
 1. Publish the argument before the fulfilled count. Otherwise another worker
    may execute with a missing `depArgs` entry.
-2. Increment `pendingTasks` before pushing. Otherwise the supervisor can see
-   zero and halt while work is becoming visible.
+2. Increment the relevant `pendingInstructions` counter before pushing.
+   Otherwise the supervisor can see zero and halt while work is becoming
+   visible.
 3. All changes that can race with `GoTo` reset must hold
    `dependencyStateMutex`.
-4. Keep loop-back edges last in `execSingleInstruction()`. Releasing `GoTo`
+4. Lock the destination instruction's `depArgsMutex` whenever mutating or
+   clearing its argument vector. Do not select argument locks by instruction
+   ID: cloned subprograms reuse local IDs.
+5. Keep loop-back edges last in `execSingleInstruction()`. Releasing `GoTo`
    before the instruction's other dependents lets a worker reset the iteration
    while dependency publication is still in flight.
-5. A skipped ordering edge must still be fulfilled by `skipInstruction()` or
+6. A skipped ordering edge must still be fulfilled by `skipInstruction()` or
    downstream joins can deadlock. Argument-indexed edges are deliberately not
    fulfilled with null.
-6. Treat an `Executor` and its mutable `Instruction` graph as one execution.
+7. Treat an `Executor` and its mutable `Instruction` graph as one execution.
    Reusing it preserves `executed`, dependency, and halt state.
 
 `ExecutionStats` counts dynamic executions in a worker-local counter and sums

@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -67,8 +68,7 @@ struct ReturnInvocation {
   std::atomic_bool claimed;
   std::vector<InstrDependent> dependents;
 
-  ReturnInvocation(std::uint64_t id,
-                   std::vector<InstrDependent> dependents);
+  ReturnInvocation(std::uint64_t id, std::vector<InstrDependent> dependents);
 };
 
 // Collects all resource and terminal-effect signals for one remapped call
@@ -83,6 +83,7 @@ struct CallCompletion {
                  InstrDependent dependent);
 };
 
+// Be sure to update the copy constructor!
 struct Instruction {
   int id;
 
@@ -92,10 +93,11 @@ struct Instruction {
   std::vector<Value> bytecodeArgs;
   // Args from previous instructions
   std::vector<std::shared_ptr<Value>> depArgs;
+  std::mutex depArgsMutex;
 
   bool skipped = false;
   bool queued = false;
-  int depCount, depsFulfilled;
+  std::atomic_int depCount, depsFulfilled;
   std::vector<InstrDependent> dependents;
 
   std::shared_ptr<Scope<Value>> scope;
@@ -103,9 +105,20 @@ struct Instruction {
   std::shared_ptr<Subprogram> program;
 
   // Has this instruction been executed? NOT reset if re-executed
-  bool executed;
+  bool executed = false;
 
   Instruction(int id, std::shared_ptr<Scope<Value>> scope = nullptr);
 
   std::string toString();
+
+  // Don't need destructor - compiler will handle it
+  // ~Instruction() = default;
+  // Copy constructor
+  Instruction(const Instruction &other);
+  // Copy assignment
+  Instruction &operator=(const Instruction &other);
+  // Move constructor
+  Instruction(Instruction &&other) noexcept;
+  // Move assignment
+  Instruction &operator=(Instruction &&other) noexcept;
 };

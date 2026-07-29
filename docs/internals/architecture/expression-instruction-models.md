@@ -21,7 +21,20 @@ The compiler model is an owning tree plus non-owning graph edges. The runtime mo
 
 ## Runtime instructions
 
-[`Instruction`](../../../src/instruction.hpp) is the flat counterpart. `bytecodeArgs` are immutable operands encoded on its line; `depArgs` are results supplied by predecessor instructions. `depCount`/`depsFulfilled`, `queued`, `skipped`, and `executed` are scheduler state. Each instruction also carries its runtime `Scope<Value>` and owning `Subprogram`.
+[`Instruction`](../../../src/instruction.hpp) is the flat counterpart.
+`bytecodeArgs` are immutable operands encoded on its line; `depArgs` are results
+supplied by predecessor instructions. Each instruction owns the mutex protecting
+that argument vector, while `depCount` and `depsFulfilled` are atomic scheduler
+counters. `queued`, `skipped`, and `executed` are also scheduler state. Each
+instruction carries its runtime `Scope<Value>` and owning `Subprogram`.
+
+Because mutexes and atomics are not implicitly copyable, `Instruction` defines
+copy and move operations explicitly. Those operations snapshot the atomic
+counts and never transfer the source mutex: constructors create a fresh mutex,
+while assignment retains the destination's mutex. These operations must be
+updated when a new instruction field is added. This is required by vector
+construction and by cloning function bodies into invocation-local
+`Subprogram`s.
 
 [`InstrDependent`](../../../src/instruction.hpp) points to an `Instruction` and preserves the optional argument index. Its additional `disabled`, `ReturnInvocation`, and `CallCompletion` fields are invocation/runtime state and have no compiler equivalent. Reusable call-edge metadata must not become a storage location for mutable per-invocation state.
 

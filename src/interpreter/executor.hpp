@@ -31,9 +31,6 @@ class Executor {
   // Used to track monotonically increasing IDs for each function call
   std::atomic_uint64_t nextCallInvocationId;
 
-  // We have to put the mutexes in here since we can't move them
-  std::vector<std::mutex> depArgsMutexes, depsFulfilledMutexes;
-
   // Loop-back instructions reset dependency state across many instructions.
   // Keep that reset atomic with respect to dependency publication.
   // Recursive because skipping a block recursively skips its instructions and
@@ -52,7 +49,6 @@ class Executor {
   // Increment depsFulfilled and, if relevant, sets depArgs[i]
   void updateDependency(InstrDependent dep, std::shared_ptr<Value> result);
   void enqueueIfReady(Instruction &instr);
-  // Use recurse = true at the root level for skipping blocks
   void skipInstruction(Instruction &instr, bool markSkippedAs = true);
   void execSingleInstruction(Instruction &instr,
                              std::uint64_t &executedInstructions);
