@@ -27,7 +27,7 @@ class Executor {
   std::vector<std::thread> workers;
   std::vector<std::uint64_t> executedInstructionsByWorker;
   // Instructions currently being executed or waiting on the queue
-  std::atomic_int pendingInstructions;
+  std::vector<std::atomic_int> pendingInstructions;
   // Used to track monotonically increasing IDs for each function call
   std::atomic_uint64_t nextCallInvocationId;
 
@@ -47,6 +47,7 @@ class Executor {
   std::string haltCause;
 
   int getQueueId(int worker, int offset) const;
+  int getNetPendingInstructions() const;
 
   // Increment depsFulfilled and, if relevant, sets depArgs[i]
   void updateDependency(InstrDependent dep, std::shared_ptr<Value> result);

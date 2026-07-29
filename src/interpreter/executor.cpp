@@ -182,6 +182,15 @@ int Executor::getQueueId(int worker, int offset) const {
   return (worker + offset) % queues.size();
 }
 
+int Executor::getNetPendingInstructions() const {
+  int count = 0;
+
+  for (const auto &pending : pendingInstructions)
+    count += pending.load();
+
+  return count;
+}
+
 void Executor::enqueueIfReady(Instruction &instr) {
   std::lock_guard<std::recursive_mutex> dependencyStateLock(
       dependencyStateMutex);
@@ -190,7 +199,7 @@ void Executor::enqueueIfReady(Instruction &instr) {
   if (!instr.queued && !instr.skipped &&
       instr.depsFulfilled == instr.depCount) {
     instr.queued = true;
-    pendingInstructions.fetch_add(1);
+    pendingInstructions[instr.id % pendingInstructions.size()].fetch_add(1);
     queues[instr.id % queues.size()].push(instr);
   }
 }
@@ -1006,7 +1015,7 @@ void Executor::execWorker(int id) {
       std::lock_guard<std::mutex> fulfilledLock(depsFulfilledMutexes[instr.id]);
       instr.queued = false;
       if (instr.skipped || instr.depsFulfilled != instr.depCount) {
-        pendingInstructions.fetch_sub(1);
+        pendingInstructions[id].fetch_sub(1);
         continue;
       }
     }
@@ -1020,7 +1029,7 @@ void Executor::execWorker(int id) {
       failed = true;
       halt = true;
     }
-    pendingInstructions.fetch_sub(1);
+    pendingInstructions[id].fetch_sub(1);
   }
 
   if (stats)
@@ -1031,7 +1040,7 @@ void Executor::supervisor() {
   if (cliArgs.verbose)
     log(LOCATION, "Supervisor awake");
 
-  while (pendingInstructions.load() > 0 && !halt)
+  while (getNetPendingInstructions() > 0 && !halt)
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   if (!halt)
@@ -1065,7 +1074,7 @@ void Executor::initQueues() {
 
   if (cliArgs.verbose)
     log(LOCATION, "Pushed {} instructions onto the queue.",
-        pendingInstructions.load());
+        getNetPendingInstructions());
 }
 
 void Executor::initScopes() {
@@ -1113,8 +1122,8 @@ Executor::Executor(const CliArgs &cliArgs, Subprogram &program,
       // contains mutexes. Also use ceiling division to ensure 1 threads
       // produces >1 queue
       queues((cliArgs.threads + THREADS_PER_QUEUE - 1) / THREADS_PER_QUEUE),
-      executedInstructionsByWorker(cliArgs.threads, 0), pendingInstructions(0),
-      nextCallInvocationId(0),
+      executedInstructionsByWorker(cliArgs.threads, 0),
+      pendingInstructions(cliArgs.threads), nextCallInvocationId(0),
       depArgsMutexes(std::vector<std::mutex>(program.size())),
       depsFulfilledMutexes(std::vector<std::mutex>(program.size())),
       halt(false), failed(false), haltCause("Unknown") {}
