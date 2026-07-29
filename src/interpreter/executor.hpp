@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-#define THREADS_PER_QUEUE 4
+#define THREADS_PER_QUEUE 64
 
 struct ExecutionStats {
   std::uint64_t executedInstructions;
